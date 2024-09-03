@@ -1,2 +1,12 @@
 *.o
 bin/*
+lib/etc/time
+src/Makefile
+syslog
+config.cache
+config.log
+config.status
+lib/plrobjs/*
+src/.accepted
+src/conf.h
+src/util/Makefile
