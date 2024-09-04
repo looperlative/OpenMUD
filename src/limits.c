@@ -240,7 +240,8 @@ void run_autowiz(void)
     /* Abusing signed -> unsigned conversion to avoid '-1' check. */
     if (res < sizeof(buf)) {
       mudlog(CMP, LVL_IMMORT, FALSE, "Initiating autowiz.");
-      system(buf);
+      int ret = system(buf);
+      ret = ret; // ret intentionally ignored
       reboot_wizlists();
     } else
       log("Cannot run autowiz: command-line doesn't fit in buffer.");
@@ -410,11 +411,11 @@ void point_update(void)
   /* characters */
   for (i = character_list; i; i = next_char) {
     next_char = i->next;
-	
+
     gain_condition(i, FULL, -1);
     gain_condition(i, DRUNK, -1);
     gain_condition(i, THIRST, -1);
-	
+
     if (GET_POS(i) >= POS_STUNNED) {
       GET_HIT(i) = MIN(GET_HIT(i) + hit_gain(i), GET_MAX_HIT(i));
       GET_MANA(i) = MIN(GET_MANA(i) + mana_gain(i), GET_MAX_MANA(i));

@@ -260,6 +260,8 @@ void olc_interpreter(void *targ, int mode, char *arg)
     }
 
   }
+
+  error = error; // Code seems incomplete. Eliminate unused warning for error.
 }
 
 

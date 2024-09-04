@@ -22,6 +22,8 @@
 #include "screen.h"
 #include "constants.h"
 
+ACMD(do_assist);
+
 /* Structures */
 struct char_data *combat_list = NULL;	/* head of l-list of fighting chars */
 struct char_data *next_combat_list = NULL;
@@ -155,12 +157,14 @@ void load_messages(void)
     fight_messages[i].msg = NULL;
   }
 
-  fgets(chk, 128, fl);
-  while (!feof(fl) && (*chk == '\n' || *chk == '*'))
-    fgets(chk, 128, fl);
+  char *p = fgets(chk, 128, fl);
+  while (p != NULL && !feof(fl) && (*chk == '\n' || *chk == '*'))
+    p = fgets(chk, 128, fl);
 
   while (*chk == 'M') {
-    fgets(chk, 128, fl);
+    p = fgets(chk, 128, fl);
+    if (p == NULL)
+	break;
     sscanf(chk, " %d\n", &type);
     for (i = 0; (i < MAX_MESSAGES) && (fight_messages[i].a_type != type) &&
 	 (fight_messages[i].a_type); i++);
@@ -186,9 +190,9 @@ void load_messages(void)
     messages->god_msg.attacker_msg = fread_action(fl, i);
     messages->god_msg.victim_msg = fread_action(fl, i);
     messages->god_msg.room_msg = fread_action(fl, i);
-    fgets(chk, 128, fl);
-    while (!feof(fl) && (*chk == '\n' || *chk == '*'))
-      fgets(chk, 128, fl);
+    p = fgets(chk, 128, fl);
+    while (p != NULL && !feof(fl) && (*chk == '\n' || *chk == '*'))
+      p = fgets(chk, 128, fl);
   }
 
   fclose(fl);

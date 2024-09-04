@@ -1409,7 +1409,7 @@ ACMD(do_where)
 ACMD(do_levels)
 {
   char buf[MAX_STRING_LENGTH];
-  size_t i, len = 0;
+  size_t len = 0;
   int nlen;
 
   if (IS_NPC(ch)) {
@@ -1417,7 +1417,7 @@ ACMD(do_levels)
     return;
   }
 
-  for (i = 1; i < LVL_IMMORT; i++) {
+  for (int i = 1; i < LVL_IMMORT; i++) {
     nlen = snprintf(buf + len, sizeof(buf) - len, "[%2d] %8d-%-8d : ", i,
 		level_exp(GET_CLASS(ch), i), level_exp(GET_CLASS(ch), i + 1) - 1);
     if (len + nlen >= sizeof(buf) || nlen < 0)

@@ -690,7 +690,7 @@ ACMD(do_give)
       send_to_char(ch, "What do you want to give %d of?\r\n", amount);
     else if (!(vict = give_find_vict(ch, argument)))
       return;
-    else if (!(obj = get_obj_in_list_vis(ch, arg, NULL, ch->carrying))) 
+    else if (!(obj = get_obj_in_list_vis(ch, arg, NULL, ch->carrying)))
       send_to_char(ch, "You don't seem to have any %ss.\r\n", arg);
     else {
       while (obj && amount--) {
@@ -770,6 +770,7 @@ void name_from_drinkcon(struct obj_data *obj)
 
   liqlen = strlen(liqname);
   CREATE(new_name, char, strlen(obj->name) - strlen(liqname)); /* +1 for NUL, -1 for space */
+  int new_name_len = 0;
 
   for (cur_name = obj->name; cur_name; cur_name = next) {
     if (*cur_name == ' ')
@@ -783,9 +784,13 @@ void name_from_drinkcon(struct obj_data *obj)
     if (!strn_cmp(cur_name, liqname, liqlen))
       continue;
 
-    if (*new_name)
-      strcat(new_name, " ");	/* strcat: OK (size precalculated) */
-    strncat(new_name, cur_name, cpylen);	/* strncat: OK (size precalculated) */
+    if (new_name_len > 0) {
+	memcpy(new_name + new_name_len, " ", 1);
+      new_name_len++;
+    }
+
+    memcpy(new_name + new_name_len, cur_name, cpylen);
+    new_name_len += cpylen;
   }
 
   if (GET_OBJ_RNUM(obj) == NOTHING || obj->name != obj_proto[GET_OBJ_RNUM(obj)].name)

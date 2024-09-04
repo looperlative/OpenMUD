@@ -176,8 +176,8 @@ char *fread_action(FILE *fl, int nr)
 {
   char buf[MAX_STRING_LENGTH];
 
-  fgets(buf, MAX_STRING_LENGTH, fl);
-  if (feof(fl)) {
+  char *p = fgets(buf, MAX_STRING_LENGTH, fl);
+  if (p == NULL || feof(fl)) {
     log("SYSERR: fread_action: unexpected EOF near action #%d", nr);
     exit(1);
   }
@@ -231,8 +231,8 @@ void boot_social_messages(void)
 
   /* now read 'em */
   for (;;) {
-    fscanf(fl, " %s ", next_soc);
-    if (*next_soc == '$')
+    int e = fscanf(fl, " %s ", next_soc);
+    if (e <= 0 || *next_soc == '$')
       break;
     if (fscanf(fl, " %d %d \n", &hide, &min_pos) != 2) {
       log("SYSERR: format error in social file near social '%s'", next_soc);
@@ -242,7 +242,7 @@ void boot_social_messages(void)
       log("SYSERR: Ran out of slots in social array. (%d > %d)", curr_soc, list_top);
       break;
     }
- 
+
     /* read the stuff */
     soc_mess_list[curr_soc].act_nr = nr = find_command(next_soc);
     soc_mess_list[curr_soc].hide = hide;

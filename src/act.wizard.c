@@ -1326,7 +1326,7 @@ void perform_immort_vis(struct char_data *ch)
     send_to_char(ch, "You are already fully visible.\r\n");
     return;
   }
-   
+
   GET_INVIS_LEV(ch) = 0;
   appear(ch);
   send_to_char(ch, "You are now fully visible.\r\n");
@@ -1351,7 +1351,7 @@ void perform_immort_invis(struct char_data *ch, int level)
   GET_INVIS_LEV(ch) = level;
   send_to_char(ch, "Your invisibility level is %d.\r\n", level);
 }
-  
+
 
 ACMD(do_invis)
 {
@@ -1631,7 +1631,6 @@ ACMD(do_wiznet)
 	buf2[MAX_INPUT_LENGTH + MAX_NAME_LENGTH + 32];
   struct descriptor_data *d;
   char emote = FALSE;
-  char any = FALSE;
   int level = LVL_IMMORT;
 
   skip_spaces(&argument);
@@ -1659,7 +1658,7 @@ ACMD(do_wiznet)
 
   case '@':
     send_to_char(ch, "God channel status:\r\n");
-    for (any = 0, d = descriptor_list; d; d = d->next) {
+    for (d = descriptor_list; d; d = d->next) {
       if (STATE(d) != CON_PLAYING || GET_LEVEL(d->character) < LVL_IMMORT)
         continue;
       if (!CAN_SEE(ch, d->character))
@@ -2585,4 +2584,3 @@ ACMD(do_set)
   if (is_file)
     free_char(cbuf);
 }
-

@@ -516,7 +516,7 @@ int sell_price(struct obj_data *obj, int shop_nr, struct char_data *keeper, stru
 
 void shopping_buy(char *arg, struct char_data *ch, struct char_data *keeper, int shop_nr)
 {
-  char tempstr[MAX_INPUT_LENGTH], tempbuf[MAX_INPUT_LENGTH];
+  char tempbuf[MAX_INPUT_LENGTH];
   struct obj_data *obj, *last_obj = NULL;
   int goldamt = 0, buynum, bought = 0;
 
@@ -613,8 +613,7 @@ void shopping_buy(char *arg, struct char_data *ch, struct char_data *keeper, int
   if (!IS_GOD(ch))
     GET_GOLD(keeper) += goldamt;
 
-  strlcpy(tempstr, times_message(ch->carrying, 0, bought), sizeof(tempstr));
-
+  char *tempstr = strdup(times_message(ch->carrying, 0, bought));
   snprintf(tempbuf, sizeof(tempbuf), "$n buys %s.", tempstr);
   act(tempbuf, FALSE, ch, obj, 0, TO_ROOM);
 
@@ -622,6 +621,7 @@ void shopping_buy(char *arg, struct char_data *ch, struct char_data *keeper, int
   do_tell(keeper, tempbuf, cmd_tell, 0);
 
   send_to_char(ch, "You now have %s.\r\n", tempstr);
+  free(tempstr);
 
   if (SHOP_USES_BANK(shop_nr))
     if (GET_GOLD(keeper) > MAX_OUTSIDE_BANK) {
@@ -738,7 +738,7 @@ void sort_keeper_objs(struct char_data *keeper, int shop_nr)
 
 void shopping_sell(char *arg, struct char_data *ch, struct char_data *keeper, int shop_nr)
 {
-  char tempstr[MAX_INPUT_LENGTH], name[MAX_INPUT_LENGTH], tempbuf[MAX_INPUT_LENGTH];
+  char name[MAX_INPUT_LENGTH], tempbuf[MAX_INPUT_LENGTH];
   struct obj_data *obj;
   int sellnum, sold = 0, goldamt = 0;
 
@@ -796,7 +796,7 @@ void shopping_sell(char *arg, struct char_data *ch, struct char_data *keeper, in
   }
   GET_GOLD(ch) += goldamt;
 
-  strlcpy(tempstr, times_message(0, name, sold), sizeof(tempstr));
+  char *tempstr = strdup(times_message(0, name, sold));
   snprintf(tempbuf, sizeof(tempbuf), "$n sells %s.", tempstr);
   act(tempbuf, FALSE, ch, obj, 0, TO_ROOM);
 
@@ -804,6 +804,7 @@ void shopping_sell(char *arg, struct char_data *ch, struct char_data *keeper, in
   do_tell(keeper, tempbuf, cmd_tell, 0);
 
   send_to_char(ch, "The shopkeeper now has %s.\r\n", tempstr);
+  free(tempstr);
 
   if (GET_GOLD(keeper) < MIN_OUTSIDE_BANK) {
     goldamt = MIN(MAX_OUTSIDE_BANK - GET_GOLD(keeper), SHOP_BANK(shop_nr));
@@ -1090,7 +1091,9 @@ int read_type_list(FILE *shop_f, struct shop_buy_data *list,
     return (read_list(shop_f, list, 0, max, LIST_TRADE));
 
   do {
-    fgets(buf, sizeof(buf), shop_f);
+    char *p = fgets(buf, sizeof(buf), shop_f);
+    if (p == NULL)
+      buf[0] = 0;
     if ((ptr = strchr(buf, ';')) != NULL)
       *ptr = '\0';
     else
@@ -1102,7 +1105,10 @@ int read_type_list(FILE *shop_f, struct shop_buy_data *list,
       for (tindex = 0; *item_types[tindex] != '\n'; tindex++)
         if (!strn_cmp(item_types[tindex], buf, strlen(item_types[tindex]))) {
           num = tindex;
-          strcpy(buf, buf + strlen(item_types[tindex]));	/* strcpy: OK (always smaller) */
+	  int l1 = strlen(item_types[tindex]);
+	  int l2 = strlen(buf + l1);
+	  memmove(buf, buf + l1, l2);
+	  buf[l2] = 0;
           break;
         }
 

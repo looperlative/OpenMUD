@@ -66,7 +66,7 @@ int mail_recip_ok(const char *name)
     if (!PLR_FLAGGED(victim, PLR_DELETED))
       ret = TRUE;
     extract_char_final(victim);
-  } else 
+  } else
     free(victim);
   return ret;
 }
@@ -204,7 +204,8 @@ void read_from_file(void *buf, int size, long filepos)
   }
 
   fseek(mail_file, filepos, SEEK_SET);
-  fread(buf, size, 1, mail_file);
+  int n = fread(buf, size, 1, mail_file);
+  n = n; // n intentionally ignored.
   fclose(mail_file);
   return;
 }
@@ -362,7 +363,7 @@ void store_mail(long to, long from, char *message_pointer)
    * this is kind of a hack, but if the block size is big enough it won't
    * matter anyway.  Hopefully, MUD players won't pour their life stories out
    * into the Mud Mail System anyway.
-   * 
+   *
    * Note that the block_type data field in data blocks is either a number >=0,
    * meaning a link to the next block, or LAST_BLOCK flag (-2) meaning the
    * last block in the current message.  This works much like DOS' FAT.

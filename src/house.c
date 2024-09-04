@@ -73,8 +73,8 @@ int House_load(room_vnum vnum)
   if (!(fl = fopen(filename, "r+b")))	/* no file found */
     return (0);
   while (!feof(fl)) {
-    fread(&object, sizeof(struct obj_file_elem), 1, fl);
-    if (ferror(fl)) {
+    int n = fread(&object, sizeof(struct obj_file_elem), 1, fl);
+    if (n < 1 || ferror(fl)) {
       perror("SYSERR: Reading house file in House_load");
       fclose(fl);
       return (0);
@@ -184,8 +184,8 @@ void House_listrent(struct char_data *ch, room_vnum vnum)
   }
   *buf = '\0';
   while (!feof(fl)) {
-    fread(&object, sizeof(struct obj_file_elem), 1, fl);
-    if (ferror(fl)) {
+    int n = fread(&object, sizeof(struct obj_file_elem), 1, fl);
+    if (n < 1 || ferror(fl)) {
       fclose(fl);
       return;
     }
@@ -251,9 +251,9 @@ void House_boot(void)
     return;
   }
   while (!feof(fl) && num_of_houses < MAX_HOUSES) {
-    fread(&temp_house, sizeof(struct house_control_rec), 1, fl);
+    int n = fread(&temp_house, sizeof(struct house_control_rec), 1, fl);
 
-    if (feof(fl))
+    if (n < 1 || feof(fl))
       break;
 
     if (get_name_by_id(temp_house.owner) == NULL)
@@ -613,4 +613,3 @@ void House_list_guests(struct char_data *ch, int i, int quiet)
 
   send_to_char(ch, "\r\n");
 }
-

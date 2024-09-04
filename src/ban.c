@@ -180,6 +180,7 @@ ACMD(do_ban)
 
   CREATE(ban_node, struct ban_list_element, 1);
   strncpy(ban_node->site, site, BANNED_SITE_LENGTH);	/* strncpy: OK (b_n->site:BANNED_SITE_LENGTH+1) */
+  ban_node->site[BANNED_SITE_LENGTH] = '\0';
   for (nextchar = ban_node->site; *nextchar; nextchar++)
     *nextchar = LOWER(*nextchar);
   ban_node->site[BANNED_SITE_LENGTH] = '\0';
@@ -262,7 +263,7 @@ int Valid_Name(char *newname)
       return (STATE(dt) == CON_PLAYING);
 
   /* return valid if list doesn't exist */
-  if (!invalid_list || num_invalid < 1)
+  if (num_invalid < 1)
     return (1);
 
   /* change to lowercase */

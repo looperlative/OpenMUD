@@ -383,8 +383,8 @@ void Crash_listrent(struct char_data *ch, char *name)
     break;
   }
   while (!feof(fl)) {
-    fread(&object, sizeof(struct obj_file_elem), 1, fl);
-    if (ferror(fl)) {
+    int n = fread(&object, sizeof(struct obj_file_elem), 1, fl);
+    if (n < 1 || ferror(fl)) {
       fclose(fl);
       return;
     }
@@ -452,8 +452,13 @@ int Crash_load(struct char_data *ch)
     mudlog(NRM, MAX(LVL_IMMORT, GET_INVIS_LEV(ch)), TRUE, "%s entering game with no equipment.", GET_NAME(ch));
     return (1);
   }
-  if (!feof(fl))
-    fread(&rent, sizeof(struct rent_info), 1, fl);
+  if (!feof(fl)) {
+    int n = fread(&rent, sizeof(struct rent_info), 1, fl);
+      if (n < 1) {
+	log("SYSERR: Crash_load: %s's rent file was empty!", GET_NAME(ch));
+	return (1);
+      }
+  }
   else {
     log("SYSERR: Crash_load: %s's rent file was empty!", GET_NAME(ch));
     return (1);
@@ -494,13 +499,13 @@ int Crash_load(struct char_data *ch)
   }
 
   while (!feof(fl)) {
-    fread(&object, sizeof(struct obj_file_elem), 1, fl);
+    int n = fread(&object, sizeof(struct obj_file_elem), 1, fl);
     if (ferror(fl)) {
       perror("SYSERR: Reading crash file: Crash_load");
       fclose(fl);
       return (1);
     }
-    if (feof(fl))
+    if (n < 1 || feof(fl))
       break;
     ++num_objs;
     if ((obj = Obj_from_store(object, &location)) == NULL)
