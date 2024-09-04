@@ -217,6 +217,7 @@
 #define PRF_DISPAUTO	(1 << 22) /* Show prompt HP, MP, MV when < 30%.	*/
 #define PRF_DISPTANK	(1 << 23) /* Show prompt Tank HP percent.	*/
 #define PRF_DISPOPPO	(1 << 24) /* Show prompt Opponent HP percent.	*/
+#define PRF_AUTOASSIST	(1 << 25) /* Automatically assist leader.	*/
 
 /* Affect bits: used in char_data.char_specials.saved.affected_by */
 /* WARNING: In the world files, NEVER set the bits marked "R" ("Reserved") */

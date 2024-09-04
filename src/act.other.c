@@ -890,7 +890,9 @@ ACMD(do_gen_tog)
     {"Autoexits disabled.\r\n",
     "Autoexits enabled.\r\n"},
     {"Will no longer track through doors.\r\n",
-    "Will now track through doors.\r\n"}
+     "Will now track through doors.\r\n"},
+    {"You will no longer Auto-Assist.\r\n",
+     "You will now Auto-Assist.\r\n"},
   };
 
 
@@ -948,6 +950,9 @@ ACMD(do_gen_tog)
     break;
   case SCMD_TRACK:
     result = (track_through_doors = !track_through_doors);
+    break;
+  case SCMD_AUTOASSIST:
+    result = PRF_TOG_CHK(ch, PRF_AUTOASSIST);
     break;
   default:
     log("SYSERR: Unknown subcmd %d in do_gen_toggle.", subcmd);

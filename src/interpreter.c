@@ -219,6 +219,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "assist"   , POS_FIGHTING, do_assist   , 1, 0 },
   { "ask"      , POS_RESTING , do_spec_comm, 0, SCMD_ASK },
   { "auction"  , POS_SLEEPING, do_gen_comm , 0, SCMD_AUCTION },
+  { "autoassist", POS_DEAD    , do_gen_tog  , 0, SCMD_AUTOASSIST },
   { "autoexit" , POS_DEAD    , do_gen_tog  , 0, SCMD_AUTOEXIT },
 
   { "bounce"   , POS_STANDING, do_action   , 0, 0 },
@@ -1031,7 +1032,7 @@ char *two_arguments(char *argument, char *first_arg, char *second_arg)
  * (now works symmetrically -- JE 7/25/94)
  *
  * that was dumb.  it shouldn't be symmetrical.  JE 5/1/95
- * 
+ *
  * returns 1 if arg1 is an abbreviation of arg2
  */
 int is_abbrev(const char *arg1, const char *arg2)

@@ -748,7 +748,7 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
    * dam_message just sends a generic "You hit $n extremely hard.".
    * skill_message is preferable to dam_message because it is more
    * descriptive.
-   * 
+   *
    * If we are _not_ attacking with a weapon (i.e. a spell), always use
    * skill_message. If we are attacking with a weapon: If this is a miss or a
    * death blow, send a skill_message if one exists; if not, default to a
@@ -986,6 +986,12 @@ void perform_violence(void)
     if (GET_POS(ch) < POS_FIGHTING) {
       send_to_char(ch, "You can't fight while sitting!!\r\n");
       continue;
+    }
+
+    for (struct follow_type *k = ch->followers; k; k = k->next) {
+      if (PRF_FLAGGED(k->follower, PRF_AUTOASSIST) &&
+        (k->follower->in_room == ch->in_room))
+      do_assist(k->follower, GET_NAME(ch), 0, 0);
     }
 
     hit(ch, FIGHTING(ch), TYPE_UNDEFINED);
