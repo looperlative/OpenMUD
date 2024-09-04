@@ -1398,25 +1398,42 @@ void roll_real_abils(struct char_data *ch)
 {
   int i, j, k, temp;
   ubyte table[6];
-  ubyte rolls[5];
+  ubyte rolls[4];
 
-  for (i = 0; i < 6; i++)
-    table[i] = 0;
+  for (int ntries = 0; ntries < 5000; ntries++) {
+    for (i = 0; i < 6; i++)
+      table[i] = 0;
 
-  for (i = 0; i < 6; i++) {
+    int total = 0;
+    int over15 = 0;
+    int under10 = 0;
 
-    for (j = 0; j < 5; j++)
-      rolls[j] = rand_number(1, 6);
+    for (i = 0; i < 6; i++) {
+      for (j = 0; j < 4; j++)
+	rolls[j] = rand_number(1, 6);
 
-    temp = rolls[0] + rolls[1] + rolls[2] + rolls[3] + rolls[4] -
-	MIN(rolls[0], MIN(rolls[1], MIN(rolls[2], MIN(rolls[3], rolls[4]))));
+      temp = rolls[0] + rolls[1] + rolls[2] + rolls[3] -
+	  MIN(rolls[0], MIN(rolls[1], MIN(rolls[2], rolls[3])));
 
-    for (k = 0; k < 6; k++)
-      if (table[k] < temp) {
-	temp ^= table[k];
-	table[k] ^= temp;
-	temp ^= table[k];
+      if (temp > 15)
+	over15++;
+      if (temp < 10)
+	under10++;
+      total += temp;
+
+      for (k = 0; k < 6; k++) {
+	if (table[k] < temp) {
+	  temp ^= table[k];
+	  table[k] ^= temp;
+	  temp ^= table[k];
+	}
       }
+    }
+
+    if (over15 >= 2 && under10 <= 1 && total >= 80) {
+      log("abilities rolled in %d tries", ntries);
+      break;
+    }
   }
 
   ch->real_abils.str_add = 0;
