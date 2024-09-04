@@ -215,6 +215,8 @@
 #define PRF_NOGRATZ	(1 << 20) /* Can't hear grats channel		*/
 #define PRF_ROOMFLAGS	(1 << 21) /* Can see room flags (ROOM_x)	*/
 #define PRF_DISPAUTO	(1 << 22) /* Show prompt HP, MP, MV when < 30%.	*/
+#define PRF_DISPTANK	(1 << 23) /* Show prompt Tank HP percent.	*/
+#define PRF_DISPOPPO	(1 << 24) /* Show prompt Opponent HP percent.	*/
 
 /* Affect bits: used in char_data.char_specials.saved.affected_by */
 /* WARNING: In the world files, NEVER set the bits marked "R" ("Reserved") */
@@ -770,7 +772,7 @@ struct char_point_data {
 };
 
 
-/* 
+/*
  * char_special_data_saved: specials which both a PC and an NPC have in
  * common, but which must be saved to the playerfile for PC's.
  *

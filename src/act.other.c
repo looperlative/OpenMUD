@@ -507,7 +507,7 @@ ACMD(do_ungroup)
   act("$N is no longer a member of your group.", FALSE, ch, 0, tch, TO_CHAR);
   act("You have been kicked out of $n's group!", FALSE, ch, 0, tch, TO_VICT);
   act("$N has been kicked out of $n's group!", FALSE, ch, 0, tch, TO_NOTVICT);
- 
+
   if (!AFF_FLAGGED(tch, AFF_CHARM))
     stop_follower(tch);
 }
@@ -750,11 +750,13 @@ ACMD(do_display)
   }
 
   if (!str_cmp(argument, "on") || !str_cmp(argument, "all"))
-    SET_BIT(PRF_FLAGS(ch), PRF_DISPHP | PRF_DISPMANA | PRF_DISPMOVE);
+    SET_BIT(PRF_FLAGS(ch), PRF_DISPHP | PRF_DISPMANA | PRF_DISPMOVE | PRF_DISPTANK | PRF_DISPOPPO);
   else if (!str_cmp(argument, "off") || !str_cmp(argument, "none"))
-    REMOVE_BIT(PRF_FLAGS(ch), PRF_DISPHP | PRF_DISPMANA | PRF_DISPMOVE);
+    REMOVE_BIT(PRF_FLAGS(ch), PRF_DISPHP | PRF_DISPMANA | PRF_DISPMOVE |
+	       PRF_DISPTANK | PRF_DISPOPPO);
   else {
-    REMOVE_BIT(PRF_FLAGS(ch), PRF_DISPHP | PRF_DISPMANA | PRF_DISPMOVE);
+    REMOVE_BIT(PRF_FLAGS(ch), PRF_DISPHP | PRF_DISPMANA | PRF_DISPMOVE |
+	       PRF_DISPTANK | PRF_DISPOPPO);
 
     for (i = 0; i < strlen(argument); i++) {
       switch (LOWER(argument[i])) {
@@ -766,6 +768,12 @@ ACMD(do_display)
 	break;
       case 'v':
 	SET_BIT(PRF_FLAGS(ch), PRF_DISPMOVE);
+	break;
+      case 't':
+	SET_BIT(PRF_FLAGS(ch), PRF_DISPTANK);
+	break;
+      case 'o':
+	SET_BIT(PRF_FLAGS(ch), PRF_DISPOPPO);
 	break;
       default:
 	send_to_char(ch, "Usage: prompt { { H | M | V } | all | auto | none }\r\n");

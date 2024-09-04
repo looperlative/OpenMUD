@@ -644,7 +644,7 @@ void game_loop(socket_t mother_desc)
      * to sleep until the next 0.1 second tick.  The first step is to
      * calculate how long we took processing the previous iteration.
      */
-    
+
     gettimeofday(&before_sleep, (struct timezone *) 0); /* current time */
     timediff(&process_time, &before_sleep, &last_time);
 
@@ -1021,6 +1021,31 @@ char *make_prompt(struct descriptor_data *d)
 
     if (PRF_FLAGGED(d->character, PRF_DISPMOVE) && len < sizeof(prompt)) {
       count = snprintf(prompt + len, sizeof(prompt) - len, "%dV ", GET_MOVE(d->character));
+      if (count >= 0)
+        len += count;
+    }
+
+    if (PRF_FLAGGED(d->character, PRF_DISPTANK) && len < sizeof(prompt)) {
+      struct char_data *vict = FIGHTING(d->character);
+      int percent = 0;
+      if (vict && GET_MAX_HIT(vict)) {
+	struct char_data *tank = FIGHTING(vict);
+	if (tank && GET_MAX_HIT(tank)) {
+	  percent = (100 * GET_HIT(tank)) / GET_MAX_HIT(tank);
+	}
+      }
+      count = snprintf(prompt + len, sizeof(prompt) - len, "%d%%T ", percent);
+      if (count >= 0)
+        len += count;
+    }
+
+    if (PRF_FLAGGED(d->character, PRF_DISPOPPO) && len < sizeof(prompt)) {
+      struct char_data *vict = FIGHTING(d->character);
+      int percent = 0;
+      if (vict && GET_MAX_HIT(vict)) {
+	percent = (100 * GET_HIT(vict)) / GET_MAX_HIT(vict);
+      }
+      count = snprintf(prompt + len, sizeof(prompt) - len, "%d%%O ", percent);
       if (count >= 0)
         len += count;
     }
@@ -1576,7 +1601,7 @@ ssize_t perform_socket_write(socket_t desc, const char *txt, size_t length)
 
 #endif /* CIRCLE_WINDOWS */
 
-    
+
 /*
  * write_to_descriptor takes a descriptor, and text to write to the
  * descriptor.  It keeps calling the system-level write() until all
@@ -2386,7 +2411,7 @@ void act(const char *str, int hide_invisible, struct char_data *ch,
 
   /*
    * Warning: the following TO_SLEEP code is a hack.
-   * 
+   *
    * I wanted to be able to tell act to deliver a message regardless of sleep
    * without adding an additional argument.  TO_SLEEP is 128 (a single bit
    * high up).  It's ONLY legal to combine TO_SLEEP with one other TO_x
