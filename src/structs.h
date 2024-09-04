@@ -20,14 +20,11 @@
 #define _CIRCLEMUD	0x030100 /* Major/Minor/Patchlevel - MMmmPP */
 
 /*
- * If you want equipment to be automatically equipped to the same place
- * it was when players rented, set the define below to 1.  Please note
- * that this will require erasing or converting all of your rent files.
- * And of course, you have to recompile everything.  We need this feature
- * for CircleMUD to be complete but we refuse to break binary file
- * compatibility.
+ * 9/4/24 - Changed the default to AUTOEQ on because this makes the most sense.
+ *          At this point, I would assume that any existing mud is not going to upgrade
+ *          to this code and it is best that we run the preferable default.
  */
-#define USE_AUTOEQ	0	/* TRUE/FALSE aren't defined yet. */
+#define USE_AUTOEQ	1	/* TRUE/FALSE aren't defined yet. */
 
 
 /* preamble *************************************************************/
