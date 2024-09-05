@@ -2584,3 +2584,89 @@ ACMD(do_set)
   if (is_file)
     free_char(cbuf);
 }
+
+ACMD(do_vlist)
+{
+  char buf[256], buf2[256];
+  int found = 0, choice = 0, nr = 0;
+  zone_rnum zone;
+  zone_vnum j;
+
+  two_arguments(argument, buf, buf2);
+
+  if (is_abbrev(buf, "objects"))
+    choice = 1;
+  if (is_abbrev(buf, "mobiles"))
+    choice = 2;
+  if (is_abbrev(buf, "rooms"))
+    choice = 3;
+
+  if (!*buf || !*buf2 || !is_number(buf2) || !choice) {
+    send_to_char(ch, "Usage: vlist { obj | mob } <zone number>\r\n");
+    return;
+  }
+
+  j = atoi(buf2);
+
+  for (zone = 0; zone <= top_of_zone_table; zone++)
+    if (zone_table[zone].number == j)
+    {
+      j = zone;
+      break;
+    }
+
+  if (j > top_of_zone_table)
+  {
+    send_to_char(ch, "That is not a vlid zone number..");
+    return;
+  }
+
+  sprintf(buf, "Zone: %s\r\n", zone_table[j].name);
+  send_to_char(ch, "%s", buf);
+
+  switch (choice)
+  {
+    case 1:
+      {
+	for (nr = 0; nr <= top_of_objt; nr++) {
+	  if (obj_index[nr].vnum <= zone_table[j].top
+	      && obj_index[nr].vnum >= (zone_table[j].number * 100)) {
+
+	    sprintf(buf, "%3d. [%5d] %s\r\n", ++found,
+		    obj_index[nr].vnum, obj_proto[nr].short_description);
+	    send_to_char(ch, "%s", buf);
+	  }
+	}
+	break;
+      }
+    case 2:
+      {
+	for (nr = 0; nr <= top_of_mobt; nr++) {
+	  if (mob_index[nr].vnum <= zone_table[j].top
+	      && mob_index[nr].vnum >= (zone_table[j].number * 100)) {
+
+	    sprintf(buf, "%3d. [%5d] %s\r\n", ++found,
+		    mob_index[nr].vnum, GET_NAME(&mob_proto[nr]));
+	    send_to_char(ch, "%s", buf);
+	  }
+	}
+	break;
+      }
+    case 3:
+      {
+	for (nr = 0; nr <= top_of_world; nr++) {
+	  if (world[nr].zone == j) {
+	    sprintf(buf, "%3d. [%5d] %s\r\n", ++found,
+		    world[nr].number, world[nr].name);
+	    send_to_char(ch, "%s", buf);
+	  }
+	}
+	break;
+      }
+    default:
+      {
+	send_to_char(ch, "Come again?! :P");
+	return;
+      }
+  }
+}

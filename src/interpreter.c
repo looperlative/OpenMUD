@@ -172,6 +172,7 @@ ACMD(do_users);
 ACMD(do_visible);
 ACMD(do_vnum);
 ACMD(do_vstat);
+ACMD(do_vlist);
 ACMD(do_wake);
 ACMD(do_wear);
 ACMD(do_weather);
@@ -511,6 +512,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "visible"  , POS_RESTING , do_visible  , 1, 0 },
   { "vnum"     , POS_DEAD    , do_vnum     , LVL_IMMORT, 0 },
   { "vstat"    , POS_DEAD    , do_vstat    , LVL_IMMORT, 0 },
+  { "vlist"    , POS_DEAD    , do_vlist    , LVL_IMMORT, 0 },
 
   { "wake"     , POS_SLEEPING, do_wake     , 0, 0 },
   { "wave"     , POS_RESTING , do_action   , 0, 0 },
