@@ -147,6 +147,7 @@ int open_logfile(const char *filename, FILE *stderr_fp);
 #if defined(POSIX)
 sigfunc *my_signal(int signo, sigfunc *func);
 #endif
+void make_who2html(void);
 
 /* extern fcnts */
 void reboot_wizlists(void);
@@ -610,6 +611,7 @@ void game_loop(socket_t mother_desc)
     /* Sleep if we don't have any connections */
     if (descriptor_list == NULL) {
       log("No connections.  Going to sleep.");
+      make_who2html();
       FD_ZERO(&input_set);
       FD_SET(mother_desc, &input_set);
       if (select(mother_desc + 1, &input_set, (fd_set *) 0, (fd_set *) 0, NULL) < 0) {
@@ -842,6 +844,9 @@ void heartbeat(int pulse)
 
   if (!(pulse % PULSE_VIOLENCE))
     perform_violence();
+
+  if (!(pulse % (30 * PASSES_PER_SEC)))
+    make_who2html();
 
   if (!(pulse % (SECS_PER_MUD_HOUR * PASSES_PER_SEC))) {
     weather_and_time(1);
@@ -2543,3 +2548,41 @@ void circle_sleep(struct timeval *timeout)
 }
 
 #endif /* CIRCLE_WINDOWS */
+
+void make_who2html(void) {
+  extern struct descriptor_data *descriptor_list;
+  extern char *class_abbrevs[];
+  FILE *opf;
+  struct descriptor_data *d;
+  struct char_data *ch;
+  char buf[1024];
+
+  if ((opf = fopen("mudwho.tmp", "w")) == 0) {
+    return; /* or log it ? *shrug* */
+  }
+
+  fprintf(opf, "<HTML><HEAD><TITLE>Who is on the Mud?</TITLE></HEAD>\n");
+  fprintf(opf, "<BODY><H1>Who is playing right now?</H1><HR>\n");
+
+  for(d = descriptor_list; d; d = d->next)
+    if(!d->connected)
+    {
+      if(d->original)
+	ch = d->original;
+      else if (!(ch = d->character))
+	continue;
+      if(GET_LEVEL(ch) < LVL_IMMORT || (GET_LEVEL(ch)>=LVL_IMMORT && !GET_INVIS_LEV(ch)))
+      {
+	sprintf(buf, "[%2d %s] %s %s\n <BR>", GET_LEVEL(ch), CLASS_ABBR(ch),
+		GET_NAME(ch), GET_TITLE(ch));
+	fprintf(opf, "%s", buf);
+      }
+    }
+    else
+      fprintf(opf,"Apparently, nobody is logged on at the moment...");
+
+  fprintf(opf, "<HR></BODY></HTML>\n");
+  fclose(opf);
+  int ret = system("mv mudwho.tmp mudwho.html &");
+  ret = ret; // ignore return value.  We don't care if it fails.
+}
