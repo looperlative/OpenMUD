@@ -994,7 +994,8 @@ void perform_violence(void)
 
     for (struct follow_type *k = ch->followers; k; k = k->next) {
       if (PRF_FLAGGED(k->follower, PRF_AUTOASSIST) &&
-        (k->follower->in_room == ch->in_room))
+	  (k->follower->in_room == ch->in_room) &&
+	  !FIGHTING(k->follower))
       do_assist(k->follower, GET_NAME(ch), 0, 0);
     }
 
