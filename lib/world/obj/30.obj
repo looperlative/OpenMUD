@@ -440,6 +440,26 @@ E
 staff metal~
 The staff is made of metals unknown to you.
 ~
+#3056
+scroll remove curse~
+a scroll of remove curse~
+A scroll has carelessly been left here.~
+~
+2 g 16385
+30 35 -1 -1
+1 2001 10
+E
+scroll remove curse~
+The scroll has a magic formula drawn upon it:
+
+     ???
+    ?   ?
+       ?
+      ?
+      ?
+      *
+
+~
 #3060
 raft~
 a raft~
