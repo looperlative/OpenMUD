@@ -184,6 +184,10 @@ const char *preference_bits[] = {
   "NO_GOS",
   "NO_GTZ",
   "RMFLG",
+  "D_AUTO",
+  "D_TANK",
+  "D_OPPO",
+  "AUTOASSIST",
   "\n"
 };
 
@@ -787,4 +791,3 @@ size_t	room_bits_count = sizeof(room_bits) / sizeof(room_bits[0]) - 1,
 	affected_bits_count = sizeof(affected_bits) / sizeof(affected_bits[0]) - 1,
 	extra_bits_count = sizeof(extra_bits) / sizeof(extra_bits[0]) - 1,
 	wear_bits_count = sizeof(wear_bits) / sizeof(wear_bits[0]) - 1;
-

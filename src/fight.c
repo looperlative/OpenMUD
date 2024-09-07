@@ -992,12 +992,20 @@ void perform_violence(void)
       continue;
     }
 
-    for (struct follow_type *k = ch->followers; k; k = k->next) {
+    // Check members of my group.
+    struct char_data *leader = ch;
+    if (ch->master != NULL)
+      leader = ch->master;
+    for (struct follow_type *k = leader->followers; k; k = k->next) {
       if (PRF_FLAGGED(k->follower, PRF_AUTOASSIST) &&
 	  (k->follower->in_room == ch->in_room) &&
 	  !FIGHTING(k->follower))
-      do_assist(k->follower, GET_NAME(ch), 0, 0);
+	do_assist(k->follower, GET_NAME(ch), 0, 0);
     }
+    if (PRF_FLAGGED(leader, PRF_AUTOASSIST) &&
+        (leader->in_room == ch->in_room) &&
+	!FIGHTING(leader))
+      do_assist(leader, GET_NAME(ch), 0, 0);
 
     hit(ch, FIGHTING(ch), TYPE_UNDEFINED);
     if (MOB_FLAGGED(ch, MOB_SPEC) && GET_MOB_SPEC(ch) && !MOB_FLAGGED(ch, MOB_NOTDEADYET)) {
