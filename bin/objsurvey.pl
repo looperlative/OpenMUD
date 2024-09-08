@@ -3,6 +3,15 @@
 use Data::Dumper qw(Dumper);
 
 #
+# Command line arguments
+#
+my $argc = @ARGV;
+my $command = 'all';
+if ($argc >= 1) {
+    $command = $ARGV[0];
+}
+
+#
 # Get the names of all of the object files.
 #
 my $objdirname = 'lib/world/obj';
@@ -35,7 +44,8 @@ foreach my $fname (@objfiles) {
 
     my %odb;
     my $o = {};
-    my @edescs;
+    my $edescs = [];
+    my $affects = [];
     while (!eof(OFILE)) {
 	my $line = <OFILE>;
 	last unless defined $line;
@@ -45,7 +55,8 @@ foreach my $fname (@objfiles) {
 		$odb{$o->{'number'}} = $o;
 	    }
 	    $o = {};
-	    @edescs = ();
+	    $edescs = [];
+	    $affects = [];
 	    $o->{'number'} = $1;
 	    $o->{'alias list'} = <OFILE>;
 	    $o->{'short description'} = <OFILE>;
@@ -58,17 +69,15 @@ foreach my $fname (@objfiles) {
 	    $o->{'wearbits'} = $fields[2];
 
 	    @fields = split / +/, <OFILE>;
-	    $o->{'value1'} = $fields[0];
-	    $o->{'value2'} = $fields[1];
-	    $o->{'value3'} = $fields[2];
-	    $o->{'value4'} = $fields[3];
+	    $o->{'value0'} = $fields[0];
+	    $o->{'value1'} = $fields[1];
+	    $o->{'value2'} = $fields[2];
+	    $o->{'value3'} = $fields[3];
 
 	    @fields = split / +/, <OFILE>;
 	    $o->{'weight'} = $fields[0];
 	    $o->{'cost'} = $fields[1];
 	    $o->{'rent'} = $fields[2];
-
-	    print Dumper($o);
 	}
 	elsif ($line =~ /^E/) {
 	    my $keywords = <OFILE>;
@@ -79,18 +88,43 @@ foreach my $fname (@objfiles) {
 		$description = $description . $line;
 	    }
 
-	    push @edescs, ($keywords, $description);
-	    $o->{'edescs'} = \@edescs;
+	    push @$edescs, ($keywords, $description);
+	    $o->{'edescs'} = $edescs;
+	}
+	elsif ($line =~ /^A/) {
+	    @fields = split / +/, <OFILE>;
+	    my $location = $fields[0];
+	    my $value = $fields[1];
+
+	    push @$affects, ($location, $value);
+	    $o->{'affects'} = $affects;
 	}
     }
     if (keys %{$o}) {
 	$odb{$o->{'number'}} = $o;
     }
 
-    foreach my $k (sort keys %odb) {
-	print "$k\n";
-	print Dumper($odb{$k});
-    }
-
     close (OFILE);
+
+    if ($command eq 'all') {
+	foreach my $k (sort keys %odb) {
+	    print "$k\n";
+	    print Dumper($odb{$k});
+	}
+    }
+    elsif ($command eq 'weapons') {
+	foreach my $k (sort keys %odb) {
+	    if ($odb{$k}->{'type'} == 5) {
+		$odb{$k}->{'short description'} =~ /^(.*)~$/;
+		my $short = $1;
+		my $ndice = $odb{$k}->{'value1'};
+		my $diesize = $odb{$k}->{'value2'};
+		my $avgdam = ($diesize + 1.0) * 0.5 * $ndice;
+		print "$k\t$avgdam\t$ndice\t$diesize\t$short\n";
+	    }
+	}
+    }
+    else {
+	print "Command needs to be 'all' or 'weapons'\n";
+    }
 }
