@@ -93,18 +93,15 @@ int mana_gain(struct char_data *ch)
     /* Position calculations    */
     switch (GET_POS(ch)) {
     case POS_SLEEPING:
-      gain *= 2;
+      gain *= 4;
       break;
     case POS_RESTING:
-      gain += (gain / 2);	/* Divide by 2 */
+      gain *= 2;
       break;
     case POS_SITTING:
-      gain += (gain / 4);	/* Divide by 4 */
+      gain += (gain / 2);	/* Divide by 2 */
       break;
     }
-
-    if (IS_MAGIC_USER(ch) || IS_CLERIC(ch))
-      gain *= 2;
 
     if ((GET_COND(ch, FULL) == 0) || (GET_COND(ch, THIRST) == 0))
       gain /= 4;
@@ -137,18 +134,15 @@ int hit_gain(struct char_data *ch)
 
     switch (GET_POS(ch)) {
     case POS_SLEEPING:
-      gain += (gain / 2);	/* Divide by 2 */
+      gain *= 2;
       break;
     case POS_RESTING:
-      gain += (gain / 4);	/* Divide by 4 */
+      gain += (gain / 2);
       break;
     case POS_SITTING:
-      gain += (gain / 8);	/* Divide by 8 */
+      gain += (gain / 4);
       break;
     }
-
-    if (IS_MAGIC_USER(ch) || IS_CLERIC(ch))
-      gain /= 2;	/* Ouch. */
 
     if ((GET_COND(ch, FULL) == 0) || (GET_COND(ch, THIRST) == 0))
       gain /= 4;
@@ -181,13 +175,13 @@ int move_gain(struct char_data *ch)
     /* Position calculations    */
     switch (GET_POS(ch)) {
     case POS_SLEEPING:
-      gain += (gain / 2);	/* Divide by 2 */
+      gain *= 4;
       break;
     case POS_RESTING:
-      gain += (gain / 4);	/* Divide by 4 */
+      gain *= 2;
       break;
     case POS_SITTING:
-      gain += (gain / 8);	/* Divide by 8 */
+      gain += (gain / 2);
       break;
     }
 
