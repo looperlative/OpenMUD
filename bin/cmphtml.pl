@@ -35,4 +35,7 @@ if (! -s $oldfile || compare($newfile, $oldfile) != 0) {
 	print OFILE "</tr>\n</table>\n</BODY>\n</HTML>\n";
     }
     close(OFILE);
+
+    copy("lib/www/mudwho.html", "/var/www/html/mudwho.html");
+    copy("lib/www/mudwho.css", "/var/www/html/mudwho.css");
 }
