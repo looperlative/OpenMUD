@@ -14,10 +14,14 @@ if (! -s $oldfile || compare($newfile, $oldfile) != 0) {
     copy($newfile, $oldfile);
 
     open(IFILE, '<', $oldfile) or die "Couldn't open $oldfile";
-    $players = [];
+    @players = ();
+    my $i = 0;
     foreach $l (<IFILE>) {
-	if ($l =~ /^\[([0-9]+) ([A-Za-z]+)\] ([A-Za-z]+) (.*)$/) {
-	    push @$players, ($1, $2, $3, $4);
+	if ($l =~ /\[([0-9]+) ([A-Za-z]+)\] ([A-Za-z]+) (.*)$/) {
+	    my @a = ($1, $2, $3, $4);
+	    my $aref = \@a;
+	    $players[$i] = $aref;
+	    $i++;
 	}
     }
     close(IFILE);
@@ -27,13 +31,17 @@ if (! -s $oldfile || compare($newfile, $oldfile) != 0) {
     print OFILE '<link rel="stylesheet" href="mudwho.css">' . "\n</HEAD>\n";
     print OFILE "<BODY>\n<H1>Who is playing right now?</H1>\n<HR>\n";
     print OFILE "<table>\n<tr>\n<td>Lvl</td>\n<td>Class</td>\n<td>Name</td>\n<td>Title</td>\n</tr>\n";
-    foreach $p ($players) {
+
+    print Dumper(@players);
+    foreach $p (@players) {
 	print OFILE "<tr>\n";
 	for my $i (@$p) {
 	    print OFILE "<td>$i</td>\n";
 	}
-	print OFILE "</tr>\n</table>\n</BODY>\n</HTML>\n";
+	print OFILE "</tr>\n";
     }
+
+    print OFILE "</table>\n</BODY>\n</HTML>\n";
     close(OFILE);
 
     copy("lib/www/mudwho.html", "/var/www/html/mudwho.html");
