@@ -134,13 +134,13 @@ int hit_gain(struct char_data *ch)
 
     switch (GET_POS(ch)) {
     case POS_SLEEPING:
-      gain *= 2;
+      gain *= 3;
       break;
     case POS_RESTING:
-      gain += (gain / 2);
+      gain *= 2;
       break;
     case POS_SITTING:
-      gain += (gain / 4);
+      gain += (gain / 2);
       break;
     }
 
