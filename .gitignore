@@ -13,3 +13,6 @@ src/util/Makefile
 mudwho.html
 mudwho.html.last
 log/*
+lib/etc/board.immort
+lib/plralias
+TAGS
