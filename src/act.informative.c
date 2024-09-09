@@ -732,6 +732,20 @@ ACMD(do_score)
      playing_time.day, playing_time.day == 1 ? "" : "s",
      playing_time.hours, playing_time.hours == 1 ? "" : "s");
 
+  if (GET_LEVEL(ch) >= 10)
+  {
+    send_to_char(ch,
+		 "Your attributes are: "
+		 "Str: [%s%d/%d%s]  Int: [%s%d%s]  Wis: [%s%d%s]  "
+		 "Dex: [%s%d%s]  Con: [%s%d%s]  Cha: [%s%d%s]\r\n",
+		 CCCYN(ch, C_NRM), GET_STR(ch), GET_ADD(ch), CCNRM(ch, C_NRM),
+		 CCCYN(ch, C_NRM), GET_INT(ch), CCNRM(ch, C_NRM),
+		 CCCYN(ch, C_NRM), GET_WIS(ch), CCNRM(ch, C_NRM),
+		 CCCYN(ch, C_NRM), GET_DEX(ch), CCNRM(ch, C_NRM),
+		 CCCYN(ch, C_NRM), GET_CON(ch), CCNRM(ch, C_NRM),
+		 CCCYN(ch, C_NRM), GET_CHA(ch), CCNRM(ch, C_NRM));
+  }
+
   send_to_char(ch, "This ranks you as %s %s (level %d).\r\n",
 	  GET_NAME(ch), GET_TITLE(ch), GET_LEVEL(ch));
 

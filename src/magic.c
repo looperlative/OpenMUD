@@ -313,7 +313,8 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     af[0].location = APPLY_AC;
     af[0].modifier = -20;
     af[0].duration = 24;
-    accum_duration = TRUE;
+    if (GET_LEVEL(ch) != LVL_IMMORT)
+      accum_duration = TRUE;
     to_vict = "You feel someone protecting you.";
     break;
 
@@ -326,7 +327,8 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     af[1].modifier = -1;
     af[1].duration = 6;
 
-    accum_duration = TRUE;
+    if (GET_LEVEL(ch) != LVL_IMMORT)
+      accum_duration = TRUE;
     to_vict = "You feel righteous.";
     break;
 
@@ -439,7 +441,8 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     af[0].duration = 4;
     af[0].bitvector = AFF_SANCTUARY;
 
-    accum_duration = TRUE;
+    if (GET_LEVEL(ch) != LVL_IMMORT)
+      accum_duration = TRUE;
     to_vict = "A white aura momentarily surrounds you.";
     to_room = "$n is surrounded by a white aura.";
     break;
@@ -636,7 +639,7 @@ void mag_areas(int level, struct char_data *ch, int spellnum, int savetype)
     act(to_char, FALSE, ch, 0, 0, TO_CHAR);
   if (to_room != NULL)
     act(to_room, FALSE, ch, 0, 0, TO_ROOM);
-  
+
 
   for (tch = world[IN_ROOM(ch)].people; tch; tch = next_tch) {
     next_tch = tch->next_in_room;
@@ -969,4 +972,3 @@ void mag_creations(int level, struct char_data *ch, int spellnum)
   act("$n creates $p.", FALSE, ch, tobj, 0, TO_ROOM);
   act("You create $p.", FALSE, ch, tobj, 0, TO_CHAR);
 }
-
