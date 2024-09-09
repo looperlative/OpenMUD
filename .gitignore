@@ -10,3 +10,6 @@ lib/plrobjs/*
 src/.accepted
 src/conf.h
 src/util/Makefile
+mudwho.html
+mudwho.html.last
+log/*
