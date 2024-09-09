@@ -32,7 +32,6 @@ if (! -s $oldfile || compare($newfile, $oldfile) != 0) {
     print OFILE "<BODY>\n<H1>Who is playing right now?</H1>\n<HR>\n";
     print OFILE "<table>\n<tr>\n<td>Lvl</td>\n<td>Class</td>\n<td>Name</td>\n<td>Title</td>\n</tr>\n";
 
-    print Dumper(@players);
     foreach $p (@players) {
 	print OFILE "<tr>\n";
 	for my $i (@$p) {
