@@ -809,14 +809,32 @@ ACMD(do_score)
   if (AFF_FLAGGED(ch, AFF_CHARM))
     send_to_char(ch, "You have been charmed!\r\n");
 
-  if (affected_by_spell(ch, SPELL_ARMOR))
-    send_to_char(ch, "You feel protected.\r\n");
-
   if (AFF_FLAGGED(ch, AFF_INFRAVISION))
     send_to_char(ch, "Your eyes are glowing red.\r\n");
 
   if (PRF_FLAGGED(ch, PRF_SUMMONABLE))
     send_to_char(ch, "You are summonable by other players.\r\n");
+
+  /* Routine to show what spells a char is affected by */
+  if (ch->affected) {
+    for (struct affected_type *aff = ch->affected; aff; aff = aff->next) {
+      send_to_char(ch, "SPL: (%3dhr) %s%-21s%s ",
+		   aff->duration + 1, CCCYN(ch, C_NRM), skill_name(aff->type), CCNRM(ch, C_NRM));
+
+      if (aff->modifier)
+	send_to_char(ch, "%+d to %s", aff->modifier, apply_types[(int) aff->location]);
+
+      if (aff->bitvector) {
+	if (aff->modifier)
+	  send_to_char(ch, ", ");
+
+	char buf[MAX_STRING_LENGTH];
+	sprintbit(aff->bitvector, affected_bits, buf, sizeof(buf));
+        send_to_char(ch, "sets %s", buf);
+      }
+      send_to_char(ch, "\r\n");
+    }
+  }
 }
 
 
