@@ -103,6 +103,9 @@ int mana_gain(struct char_data *ch)
       break;
     }
 
+    if (IS_MAGIC_USER(ch) || IS_CLERIC(ch))
+      gain *= 2;
+
     if ((GET_COND(ch, FULL) == 0) || (GET_COND(ch, THIRST) == 0))
       gain /= 4;
   }
