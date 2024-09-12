@@ -25,6 +25,7 @@
 
 /* external variables  */
 extern int tunnel_size;
+extern int movement_is_free;
 
 /* external functions */
 int special(struct char_data *ch, int cmd, char *arg);
@@ -78,7 +79,7 @@ int has_boat(struct char_data *ch)
   return (0);
 }
 
-  
+
 
 /* do_simple_move assumes
  *    1. That there is no master and no followers.
@@ -120,6 +121,8 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   /* move points needed is avg. move loss for src and destination sect type */
   need_movement = (movement_loss[SECT(IN_ROOM(ch))] +
 		   movement_loss[SECT(EXIT(ch, dir)->to_room)]) / 2;
+  if (movement_is_free)
+      need_movement = 0;
 
   if (GET_MOVE(ch) < need_movement && !IS_NPC(ch)) {
     if (need_specials_check && ch->master)
