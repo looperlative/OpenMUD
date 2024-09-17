@@ -353,6 +353,11 @@ void do_auto_exits(struct char_data *ch)
 {
   int door, slen = 0;
 
+  if (GET_LEVEL(ch) >= LVL_IMMORT) {
+    do_exits(ch, NULL, 0, 0);
+    return;
+  }
+
   send_to_char(ch, "%s[ Exits: ", CCCYN(ch, C_NRM));
 
   for (door = 0; door < NUM_OF_DIRS; door++) {
@@ -383,17 +388,21 @@ ACMD(do_exits)
   for (door = 0; door < NUM_OF_DIRS; door++) {
     if (!EXIT(ch, door) || EXIT(ch, door)->to_room == NOWHERE)
       continue;
-    if (EXIT_FLAGGED(EXIT(ch, door), EX_CLOSED))
+    if (EXIT_FLAGGED(EXIT(ch, door), EX_CLOSED) && GET_LEVEL(ch) < LVL_IMMORT)
       continue;
 
     len++;
 
-    if (GET_LEVEL(ch) >= LVL_IMMORT)
-      send_to_char(ch, "%-5s - [%5d] %s\r\n", dirs[door], GET_ROOM_VNUM(EXIT(ch, door)->to_room),
-		world[EXIT(ch, door)->to_room].name);
-    else
+    if (GET_LEVEL(ch) >= LVL_IMMORT) {
+      send_to_char(ch, "%-5s - [%5d] %s %s\r\n",
+		   dirs[door], GET_ROOM_VNUM(EXIT(ch, door)->to_room),
+		   world[EXIT(ch, door)->to_room].name,
+		   EXIT_FLAGGED(EXIT(ch, door), EX_CLOSED) ? "(closed)" : "");
+    }
+    else {
       send_to_char(ch, "%-5s - %s\r\n", dirs[door], IS_DARK(EXIT(ch, door)->to_room) &&
 		!CAN_SEE_IN_DARK(ch) ? "Too dark to tell." : world[EXIT(ch, door)->to_room].name);
+    }
   }
 
   if (!len)
