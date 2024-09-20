@@ -117,7 +117,7 @@ void	update_pos(struct char_data *victim);
  *	and utils.c for other places to change.
  */
 /* mud-life time */
-#define SECS_PER_MUD_HOUR	60
+#define SECS_PER_MUD_HOUR	75
 #define SECS_PER_MUD_DAY	(24*SECS_PER_MUD_HOUR)
 #define SECS_PER_MUD_MONTH	(35*SECS_PER_MUD_DAY)
 #define SECS_PER_MUD_YEAR	(17*SECS_PER_MUD_MONTH)
