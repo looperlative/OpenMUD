@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/bash
 #
 # CircleMUD autorun script
 # Contributions by Fred Merkel, Stuart Lamble, and Jeremy Elson
@@ -41,6 +41,7 @@ FLAGS='-q'
 
 # Number of syslog.# files to keep in the log directory.
 BACKLOGS=6
+PSAVES=10
 
 # Each record in the following variable contains information for one log file.
 # The fields are filename:maxlines:pattern where filename is the name of the
@@ -119,6 +120,25 @@ proc_syslog () {
   mv -f syslog log/syslog.$newlog
 }
 
+backup_playerfile () {
+  # Find the # to set the new log file to.
+  if [ -s lib/etc/players.$PSAVES ]; then
+    declare -i newsave=$PSAVES+1
+  else
+    declare -i newsave=1
+    while [ -s lib/etc/players.$newsave ]; do newsave=$newsave+1; done
+  fi
+
+  # Rotate the logs.
+  declare -i y=2
+  while [ $y -lt $newsave ]; do
+    declare -i x=$y-1
+    mv -f lib/etc/players.$y lib/etc/players.$x
+    y=$y+1
+  done
+  cp -f lib/etc/players lib/etc/players.$newsave
+}
+
 
 ########
 # Main #
@@ -147,6 +167,7 @@ while ( : ) do
     echo "autoscript killed $DATE"  >> syslog
     rm .killscript
     proc_syslog
+    backup_playerfile
     exit
   fi
 
@@ -161,6 +182,7 @@ while ( : ) do
   done
 
   proc_syslog
+  backup_playerfile
   sleep 5
 
 done
