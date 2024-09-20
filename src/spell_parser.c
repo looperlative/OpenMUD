@@ -165,7 +165,7 @@ const char *skill_name(int num)
     return ("UNDEFINED");
 }
 
-	 
+
 int find_skill_num(char *name)
 {
   int skindex, ok;
@@ -457,7 +457,7 @@ int cast_spell(struct char_data *ch, struct char_data *tch,
 	TOP_SPELL_DEFINE);
     return (0);
   }
-    
+
   if (GET_POS(ch) < SINFO.min_position) {
     switch (GET_POS(ch)) {
       case POS_SLEEPING:
@@ -663,7 +663,7 @@ void spell_level(int spell, int chclass, int level)
     bad = 1;
   }
 
-  if (!bad)    
+  if (!bad)
     spell_info[spell].min_level[chclass] = level;
 }
 
@@ -816,11 +816,11 @@ void mag_assign_spells(void)
 	TAR_CHAR_ROOM, FALSE, MAG_UNAFFECTS,
 	NULL);
 
-  spello(SPELL_CURE_CRITIC, "cure critic", 30, 10, 2, POS_FIGHTING,
+  spello(SPELL_CURE_CRITIC, "cure critic", 30, 6, 2, POS_FIGHTING,
 	TAR_CHAR_ROOM, FALSE, MAG_POINTS,
 	NULL);
 
-  spello(SPELL_CURE_LIGHT, "cure light", 30, 10, 2, POS_FIGHTING,
+  spello(SPELL_CURE_LIGHT, "cure light", 30, 2, 2, POS_FIGHTING,
 	TAR_CHAR_ROOM, FALSE, MAG_POINTS,
 	NULL);
 
@@ -872,7 +872,7 @@ void mag_assign_spells(void)
 	TAR_CHAR_ROOM | TAR_FIGHT_VICT, TRUE, MAG_DAMAGE,
 	NULL);
 
-  spello(SPELL_GROUP_HEAL, "group heal", 80, 60, 5, POS_STANDING,
+  spello(SPELL_GROUP_HEAL, "group heal", 80, 40, 10, POS_STANDING,
 	TAR_IGNORE, FALSE, MAG_GROUPS,
 	NULL);
 
@@ -880,7 +880,7 @@ void mag_assign_spells(void)
 	TAR_CHAR_ROOM | TAR_FIGHT_VICT, TRUE, MAG_DAMAGE,
 	NULL);
 
-  spello(SPELL_HEAL, "heal", 60, 40, 3, POS_FIGHTING,
+  spello(SPELL_HEAL, "heal", 60, 20, 4, POS_FIGHTING,
 	TAR_CHAR_ROOM, FALSE, MAG_POINTS | MAG_UNAFFECTS,
 	NULL);
 
@@ -1005,5 +1005,6 @@ void mag_assign_spells(void)
   skillo(SKILL_SNEAK, "sneak");
   skillo(SKILL_STEAL, "steal");
   skillo(SKILL_TRACK, "track");
+  skillo(SKILL_ATTACK2, "second attack");
+  skillo(SKILL_ATTACK3, "third attack");
 }
-

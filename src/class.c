@@ -1707,12 +1707,15 @@ void init_spell_levels(void)
   spell_level(SKILL_STEAL, CLASS_THIEF, 4);
   spell_level(SKILL_HIDE, CLASS_THIEF, 5);
   spell_level(SKILL_TRACK, CLASS_THIEF, 6);
+  spell_level(SKILL_ATTACK2, CLASS_THIEF, 22);
 
   /* WARRIORS */
   spell_level(SKILL_KICK, CLASS_WARRIOR, 1);
   spell_level(SKILL_RESCUE, CLASS_WARRIOR, 3);
   spell_level(SKILL_TRACK, CLASS_WARRIOR, 9);
   spell_level(SKILL_BASH, CLASS_WARRIOR, 12);
+  spell_level(SKILL_ATTACK2, CLASS_WARRIOR, 18);
+  spell_level(SKILL_ATTACK3, CLASS_WARRIOR, 24);
 }
 
 

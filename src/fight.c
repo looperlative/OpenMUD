@@ -1008,6 +1008,12 @@ void perform_violence(void)
       do_assist(leader, GET_NAME(ch), 0, 0);
 
     hit(ch, FIGHTING(ch), TYPE_UNDEFINED);
+    if (FIGHTING(ch) && GET_SKILL(ch, SKILL_ATTACK2) >= rand_number(1, 101)) {
+      hit(ch, FIGHTING(ch), TYPE_UNDEFINED);
+      if (FIGHTING(ch) && GET_SKILL(ch, SKILL_ATTACK3) >= rand_number(1, 101)) {
+	hit(ch, FIGHTING(ch), TYPE_UNDEFINED);
+      }
+    }
     if (MOB_FLAGGED(ch, MOB_SPEC) && GET_MOB_SPEC(ch) && !MOB_FLAGGED(ch, MOB_NOTDEADYET)) {
       char actbuf[MAX_INPUT_LENGTH] = "";
       (GET_MOB_SPEC(ch)) (ch, ch, 0, actbuf);
