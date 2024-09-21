@@ -30,6 +30,7 @@ ACMD(do_drop);
 ACMD(do_gen_door);
 ACMD(do_say);
 ACMD(do_action);
+int mag_manacost(struct char_data *ch, int spellnum);
 
 /* local functions */
 void sort_spells(void);
@@ -118,6 +119,7 @@ extern int prac_params[4][NUM_CLASSES];
 #define MINGAIN(ch) (prac_params[MIN_PER_PRAC][(int)GET_CLASS(ch)])
 #define MAXGAIN(ch) (prac_params[MAX_PER_PRAC][(int)GET_CLASS(ch)])
 #define SPLSKL(ch) (prac_types[prac_params[PRAC_TYPE][(int)GET_CLASS(ch)]])
+#define ISSKILL(ch) (prac_params[PRAC_TYPE][(int)GET_CLASS(ch)])
 
 void list_skills(struct char_data *ch)
 {
@@ -126,19 +128,22 @@ void list_skills(struct char_data *ch)
   size_t len = 0;
   char buf2[MAX_STRING_LENGTH];
 
-  if (!GET_PRACTICES(ch)) {
-    send_to_char(ch, "You have no practice sessions remaining.\r\n");
-    return;
-  }
-
   len = snprintf(buf2, sizeof(buf2), "You have %d practice session%s remaining.\r\n"
 	"You know of the following %ss:\r\n", GET_PRACTICES(ch),
 	GET_PRACTICES(ch) == 1 ? "" : "s", SPLSKL(ch));
-  
+
   for (sortpos = 1; sortpos <= MAX_SKILLS; sortpos++) {
     i = spell_sort_info[sortpos];
     if (GET_LEVEL(ch) >= spell_info[i].min_level[(int) GET_CLASS(ch)]) {
-      nlen = snprintf(buf2 + len, sizeof(buf2) - len, "%-20s %s\r\n", spell_info[i].name, how_good(GET_SKILL(ch, i)));
+      if (!ISSKILL(ch) && GET_LEVEL(ch) < LVL_IMMORT) {
+	nlen = snprintf(buf2 + len, sizeof(buf2) - len, "%-20s %-15s[%d]\r\n",
+			spell_info[i].name, how_good(GET_SKILL(ch, i)),
+			mag_manacost(ch, i));
+      }
+      else {
+	nlen = snprintf(buf2 + len, sizeof(buf2) - len, "%-20s %s\r\n",
+			spell_info[i].name, how_good(GET_SKILL(ch, i)));
+      }
       if (len + nlen >= sizeof(buf2) || nlen < 0)
         break;
       len += nlen;
@@ -752,4 +757,3 @@ SPECIAL(bank)
   } else
     return (FALSE);
 }
-

@@ -922,7 +922,7 @@ void mag_assign_spells(void)
 	TAR_CHAR_ROOM | TAR_OBJ_INV | TAR_OBJ_ROOM, FALSE, MAG_UNAFFECTS | MAG_ALTER_OBJS,
 	NULL);
 
-  spello(SPELL_SANCTUARY, "sanctuary", 110, 85, 5, POS_STANDING,
+  spello(SPELL_SANCTUARY, "sanctuary", 110, 60, 5, POS_STANDING,
 	TAR_CHAR_ROOM, FALSE, MAG_AFFECTS,
 	"The white aura around your body fades.");
 
