@@ -1903,8 +1903,10 @@ void zone_update(void)
     /* since one minute has passed, increment zone ages */
     for (i = 0; i <= top_of_zone_table; i++) {
       if (zone_table[i].age < zone_table[i].lifespan &&
-	  zone_table[i].reset_mode)
+	  zone_table[i].reset_mode) {
 	(zone_table[i].age)++;
+	(zone_table[i].empty_age)++;
+      }
 
       if (zone_table[i].age >= zone_table[i].lifespan &&
 	  zone_table[i].age < ZO_DEAD && zone_table[i].reset_mode) {
@@ -1963,12 +1965,58 @@ void log_zone_error(zone_rnum zone, int cmd_no, const char *message)
 #define ZONE_ERROR(message) \
 	{ log_zone_error(zone, cmd_no, message); last_cmd = 0; }
 
+/* clean zone */
+void clean_zone(zone_rnum zone)
+{
+  /*
+   * For every room in the zone:
+   *   For every MOB in room:
+   *     Extract MOB
+   *   For every OBJ in room:
+   *     Extract OBJ
+   */
+  for (int i = 0; i < top_of_world; i++)
+  {
+    if (world[i].zone == zone) {
+      struct char_data *ch = world[i].people;
+      while (ch != NULL)
+      {
+	if (IS_NPC(ch)) {
+	  extract_char(ch);
+	}
+	ch = ch->next_in_room;
+      }
+    }
+  }
+
+  extract_pending_chars();
+
+  for (int i = 0; i < top_of_world; i++)
+  {
+    if (world[i].zone == zone) {
+      while (world[i].contents != NULL)
+      {
+	extract_obj(world[i].contents);
+      }
+    }
+  }
+}
+
 /* execute the reset command table of a given zone */
 void reset_zone(zone_rnum zone)
 {
   int cmd_no, last_cmd = 0;
   struct char_data *mob = NULL;
   struct obj_data *obj, *obj_to;
+
+  if (!is_empty(zone))
+    zone_table[zone].empty_age = 0;
+
+  if (zone_table[zone].empty_age >= zone_table[zone].lifespan * 5) {
+    zone_table[zone].empty_age = 0;
+    mudlog(CMP, LVL_GOD, TRUE, "Auto zone clean: %s", zone_table[zone].name);
+    clean_zone(zone);
+  }
 
   for (cmd_no = 0; ZCMD.command != 'S'; cmd_no++) {
 

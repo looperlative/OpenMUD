@@ -71,6 +71,7 @@ ACMD(do_backstab);
 ACMD(do_ban);
 ACMD(do_bash);
 ACMD(do_cast);
+ACMD(do_zclean);
 ACMD(do_color);
 ACMD(do_commands);
 ACMD(do_consider);
@@ -540,6 +541,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "yawn"     , POS_RESTING , do_action   , 0, 0 },
   { "yodel"    , POS_RESTING , do_action   , 0, 0 },
 
+  { "zclean"   , POS_DEAD    , do_zclean    , LVL_GRGOD, 0 },
   { "zreset"   , POS_DEAD    , do_zreset   , LVL_GRGOD, 0 },
 
   { "\n", 0, 0, 0, 0 } };	/* this must be last */

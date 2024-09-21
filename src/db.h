@@ -146,7 +146,7 @@ struct reset_com {
    int	arg3;		/*                                      */
    int line;		/* line number this command appears on  */
 
-   /* 
+   /*
 	*  Commands:              *
 	*  'M': Read a mobile     *
 	*  'O': Read an object    *
@@ -165,6 +165,7 @@ struct zone_data {
    char	*name;		    /* name of this zone                  */
    int	lifespan;           /* how long between resets (minutes)  */
    int	age;                /* current age of this zone (minutes) */
+   int  empty_age;	    /* time no PCs in zone (minutes)      */
    room_vnum bot;           /* starting room number for this zone */
    room_vnum top;           /* upper limit for rooms in this zone */
 

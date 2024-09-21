@@ -83,7 +83,7 @@ int isname(const char *str, const char *namelist)
 
 
 
-void affect_modify(struct char_data *ch, byte loc, sbyte mod, 
+void affect_modify(struct char_data *ch, byte loc, sbyte mod,
                    bitvector_t bitv, bool add)
 {
   if (add)
@@ -406,6 +406,9 @@ void char_to_room(struct char_data *ch, room_rnum room)
       stop_fighting(FIGHTING(ch));
       stop_fighting(ch);
     }
+
+    if (!IS_NPC(ch) && GET_LEVEL(ch) < LVL_IMMORT)
+      zone_table[world[room].zone].empty_age = 0;
   }
 }
 

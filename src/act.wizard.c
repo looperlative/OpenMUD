@@ -46,6 +46,7 @@ void reset_zone(zone_rnum zone);
 void roll_real_abils(struct char_data *ch);
 int parse_class(char arg);
 void run_autowiz(void);
+void clean_zone(zone_rnum zone);
 
 /* local functions */
 int perform_set(struct char_data *ch, struct char_data *vict, int mode, char *val_arg);
@@ -83,6 +84,7 @@ ACMD(do_date);
 ACMD(do_last);
 ACMD(do_force);
 ACMD(do_wiznet);
+ACMD(do_zclean);
 ACMD(do_zreset);
 ACMD(do_wizutil);
 size_t print_zone_to_buf(char *bufptr, size_t left, zone_rnum zone);
@@ -1096,9 +1098,6 @@ ACMD(do_vstat)
     send_to_char(ch, "That'll have to be either 'obj' or 'mob'.\r\n");
 }
 
-
-
-
 /* clean a room of all mobiles and objects */
 ACMD(do_purge)
 {
@@ -1714,6 +1713,34 @@ ACMD(do_wiznet)
 }
 
 
+ACMD(do_zclean)
+{
+  char arg[MAX_INPUT_LENGTH];
+  zone_rnum i;
+  zone_vnum j;
+
+  one_argument(argument, arg);
+  if (!*arg) {
+    send_to_char(ch, "You must specify a zone.\r\n");
+    return;
+  }
+  if (*arg == '.')
+    i = world[IN_ROOM(ch)].zone;
+  else {
+    j = atoi(arg);
+    for (i = 0; i <= top_of_zone_table; i++)
+      if (zone_table[i].number == j)
+	break;
+  }
+  if (i <= top_of_zone_table) {
+    clean_zone(i);
+    send_to_char(ch, "Clean zone %d (#%d): %s.\r\n", i, zone_table[i].number, zone_table[i].name);
+    mudlog(NRM, MAX(LVL_GRGOD, GET_INVIS_LEV(ch)), TRUE,
+	   "(GC) %s clean zone %d (%s)", GET_NAME(ch), i, zone_table[i].name);
+  } else
+    send_to_char(ch, "Invalid zone number.\r\n");
+}
+
 
 ACMD(do_zreset)
 {
@@ -1859,10 +1886,10 @@ ACMD(do_wizutil)
 size_t print_zone_to_buf(char *bufptr, size_t left, zone_rnum zone)
 {
   return snprintf(bufptr, left,
-	"%3d %-30.30s Age: %3d; Reset: %3d (%1d); Range: %5d-%5d\r\n",
+	"%3d %-30.30s Age: %3d; Reset: %3d (%1d); Empty: %3d; Range: %5d-%5d\r\n",
 	zone_table[zone].number, zone_table[zone].name,
 	zone_table[zone].age, zone_table[zone].lifespan,
-	zone_table[zone].reset_mode,
+	zone_table[zone].reset_mode, zone_table[zone].empty_age,
 	zone_table[zone].bot, zone_table[zone].top);
 }
 
