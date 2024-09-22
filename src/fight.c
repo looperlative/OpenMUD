@@ -1002,13 +1002,13 @@ void perform_violence(void)
 	  !FIGHTING(k->follower))
 	do_assist(k->follower, GET_NAME(ch), 0, 0);
     }
-    if (PRF_FLAGGED(leader, PRF_AUTOASSIST) &&
+    if (!IS_NPC(leader) && PRF_FLAGGED(leader, PRF_AUTOASSIST) &&
         (leader->in_room == ch->in_room) &&
 	!FIGHTING(leader))
       do_assist(leader, GET_NAME(ch), 0, 0);
 
     hit(ch, FIGHTING(ch), TYPE_UNDEFINED);
-    if (FIGHTING(ch) && GET_SKILL(ch, SKILL_ATTACK2) >= rand_number(1, 101)) {
+    if (!IS_NPC(leader) && FIGHTING(ch) && GET_SKILL(ch, SKILL_ATTACK2) >= rand_number(1, 101)) {
       hit(ch, FIGHTING(ch), TYPE_UNDEFINED);
       if (FIGHTING(ch) && GET_SKILL(ch, SKILL_ATTACK3) >= rand_number(1, 101)) {
 	hit(ch, FIGHTING(ch), TYPE_UNDEFINED);
