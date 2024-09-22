@@ -753,6 +753,16 @@ ACMD(do_score)
 		 CCCYN(ch, C_NRM), GET_DEX(ch), CCNRM(ch, C_NRM),
 		 CCCYN(ch, C_NRM), GET_CON(ch), CCNRM(ch, C_NRM),
 		 CCCYN(ch, C_NRM), GET_CHA(ch), CCNRM(ch, C_NRM));
+    send_to_char(ch,
+		 "Your natural attributes are: "
+		 "Str: [%s%d/%d%s]  Int: [%s%d%s]  Wis: [%s%d%s]  "
+		 "Dex: [%s%d%s]  Con: [%s%d%s]  Cha: [%s%d%s]\r\n",
+		 CCCYN(ch, C_NRM), ch->real_abils.str, ch->real_abils.str_add, CCNRM(ch, C_NRM),
+		 CCCYN(ch, C_NRM), ch->real_abils.intel, CCNRM(ch, C_NRM),
+		 CCCYN(ch, C_NRM), ch->real_abils.wis, CCNRM(ch, C_NRM),
+		 CCCYN(ch, C_NRM), ch->real_abils.dex, CCNRM(ch, C_NRM),
+		 CCCYN(ch, C_NRM), ch->real_abils.con, CCNRM(ch, C_NRM),
+		 CCCYN(ch, C_NRM), ch->real_abils.cha, CCNRM(ch, C_NRM));
   }
 
   send_to_char(ch, "This ranks you as %s %s (level %d).\r\n",
