@@ -1713,9 +1713,13 @@ void nanny(struct descriptor_data *d, char *arg)
 		      "\r\nAbilities: 1. Str %d/%d, 2. Int %d, 3. Wis %d, "
 		      "4. Dex %d, 5. Con %d, 6. Cha %d\r\n"
 		      "First ability to improve: ",
-		      GET_STR(d->character), GET_ADD(d->character), GET_INT(d->character),
-		      GET_WIS(d->character), GET_DEX(d->character), GET_CON(d->character),
-		      GET_CHA(d->character));
+		      d->character->real_abils.str,
+		      d->character->real_abils.str_add,
+		      d->character->real_abils.intel,
+		      d->character->real_abils.wis,
+		      d->character->real_abils.dex,
+		      d->character->real_abils.con,
+		      d->character->real_abils.cha);
     }
     else {
       roll_abils(d->character, &d->character->new_abils);
@@ -1724,9 +1728,13 @@ void nanny(struct descriptor_data *d, char *arg)
 		      "2. New Abilities: Str %d/%d, Int %d, Wis %d, Dex %d, Con %d, Cha %d\r\n"
 		      "3. Reroll again.\r\n"
 		      "Choose option: ",
-		      GET_STR(d->character), GET_ADD(d->character), GET_INT(d->character),
-		      GET_WIS(d->character), GET_DEX(d->character), GET_CON(d->character),
-		      GET_CHA(d->character),
+		      d->character->real_abils.str,
+		      d->character->real_abils.str_add,
+		      d->character->real_abils.intel,
+		      d->character->real_abils.wis,
+		      d->character->real_abils.dex,
+		      d->character->real_abils.con,
+		      d->character->real_abils.cha,
 		      d->character->new_abils.str,
 		      d->character->new_abils.str_add,
 		      d->character->new_abils.intel,
@@ -1782,17 +1790,25 @@ void nanny(struct descriptor_data *d, char *arg)
 		      "\r\nAbilities: 1. Str %d/%d, 2. Int %d, 3. Wis %d, "
 		      "4. Dex %d, 5. Con %d, 6. Cha %d\r\n"
 		      "Second ability to improve: ",
-		      GET_STR(d->character), GET_ADD(d->character), GET_INT(d->character),
-		      GET_WIS(d->character), GET_DEX(d->character), GET_CON(d->character),
-		      GET_CHA(d->character));
+		      d->character->real_abils.str,
+		      d->character->real_abils.str_add,
+		      d->character->real_abils.intel,
+		      d->character->real_abils.wis,
+		      d->character->real_abils.dex,
+		      d->character->real_abils.con,
+		      d->character->real_abils.cha);
     }
     else {
       STATE(d) = CON_PLAYING;
       write_to_output(d,
 		      "\r\nYour Abilities: Str %d/%d, Int %d, Wis %d, Dex %d, Con %d, Cha %d\r\n",
-		      GET_STR(d->character), GET_ADD(d->character), GET_INT(d->character),
-		      GET_WIS(d->character), GET_DEX(d->character), GET_CON(d->character),
-		      GET_CHA(d->character));
+		      d->character->real_abils.str,
+		      d->character->real_abils.str_add,
+		      d->character->real_abils.intel,
+		      d->character->real_abils.wis,
+		      d->character->real_abils.dex,
+		      d->character->real_abils.con,
+		      d->character->real_abils.cha);
       save_char(d->character);
       look_at_room(d->character, 0);
       d->has_prompt = 0;

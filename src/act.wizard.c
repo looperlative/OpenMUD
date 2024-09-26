@@ -635,7 +635,7 @@ void do_stat_character(struct char_data *ch, struct char_data *k)
 	    GET_PRACTICES(k), int_app[GET_INT(k)].learn,
 	    wis_app[GET_WIS(k)].bonus);
   }
-  send_to_char(ch, "Str: [%s%d/%d%s]  Int: [%s%d%s]  Wis: [%s%d%s]  "
+  send_to_char(ch, "Affected: Str: [%s%d/%d%s]  Int: [%s%d%s]  Wis: [%s%d%s]  "
 	  "Dex: [%s%d%s]  Con: [%s%d%s]  Cha: [%s%d%s]\r\n",
 	  CCCYN(ch, C_NRM), GET_STR(k), GET_ADD(k), CCNRM(ch, C_NRM),
 	  CCCYN(ch, C_NRM), GET_INT(k), CCNRM(ch, C_NRM),
@@ -643,6 +643,15 @@ void do_stat_character(struct char_data *ch, struct char_data *k)
 	  CCCYN(ch, C_NRM), GET_DEX(k), CCNRM(ch, C_NRM),
 	  CCCYN(ch, C_NRM), GET_CON(k), CCNRM(ch, C_NRM),
 	  CCCYN(ch, C_NRM), GET_CHA(k), CCNRM(ch, C_NRM));
+
+  send_to_char(ch, " Natural: Str: [%s%d/%d%s]  Int: [%s%d%s]  Wis: [%s%d%s]  "
+	  "Dex: [%s%d%s]  Con: [%s%d%s]  Cha: [%s%d%s]\r\n",
+	  CCCYN(ch, C_NRM), k->real_abils.str, k->real_abils.str_add, CCNRM(ch, C_NRM),
+	  CCCYN(ch, C_NRM), k->real_abils.intel, CCNRM(ch, C_NRM),
+	  CCCYN(ch, C_NRM), k->real_abils.wis, CCNRM(ch, C_NRM),
+	  CCCYN(ch, C_NRM), k->real_abils.dex, CCNRM(ch, C_NRM),
+	  CCCYN(ch, C_NRM), k->real_abils.con, CCNRM(ch, C_NRM),
+	  CCCYN(ch, C_NRM), k->real_abils.cha, CCNRM(ch, C_NRM));
 
   send_to_char(ch, "Hit p.:[%s%d/%d+%d%s]  Mana p.:[%s%d/%d+%d%s]  Move p.:[%s%d/%d+%d%s]\r\n",
 	  CCGRN(ch, C_NRM), GET_HIT(k), GET_MAX_HIT(k), hit_gain(k), CCNRM(ch, C_NRM),

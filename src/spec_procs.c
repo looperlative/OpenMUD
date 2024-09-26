@@ -814,8 +814,13 @@ SPECIAL(room_of_introspection)
 		 "2. New Abilities: Str %d/%d, Int %d, Wis %d, Dex %d, Con %d, Cha %d\r\n"
 		 "3. Reroll again.\r\n"
 		 "Choose option: ",
-		 GET_STR(ch), GET_ADD(ch), GET_INT(ch), GET_WIS(ch), GET_DEX(ch), GET_CON(ch),
-		 GET_CHA(ch),
+		 ch->real_abils.str,
+		 ch->real_abils.str_add,
+		 ch->real_abils.intel,
+		 ch->real_abils.wis,
+		 ch->real_abils.dex,
+		 ch->real_abils.con,
+		 ch->real_abils.cha,
 		 ch->new_abils.str, ch->new_abils.str_add,
 		 ch->new_abils.intel,
 		 ch->new_abils.wis,
