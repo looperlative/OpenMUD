@@ -21,7 +21,7 @@ picturing Gods, Giants and peasants.
    Large steps lead down through the grand temple gate, descending the huge
 mound upon which the temple is built and ends on the temple square below.
 To the west, you see the Reading Room.  The donation room is in a small
-alcove to your east.
+alcove to your east.  The Room of Introspection is up the stairs.
 ~
 30 cdeh 0
 D0
@@ -45,6 +45,11 @@ You see the Reading Room.
 ~
 ~
 0 -1 3000
+D4
+You see the Room of Introspection
+~
+~
+0 -1 3067
 D5
 You see the temple square.
 ~
@@ -1440,5 +1445,22 @@ There is a large rusty gate just to the west.
 ~
 ~
 0 -1 3600
+S
+#3067
+The Room Of Introspection~
+   You stand in a quiet room where people come to contemplate their existence and
+ponder the next step in their lives.  Upon achieving the maximum experience for
+your character you may come here to attain your next step.  Simply pray to the
+gods.  They will answer one of two prayers:
+
+1. "pray rebirth" to return to level 1 and improve upon your inate abilities.
+2. "pray ascension" to leave the mortal realm and achieve enlightenment.
+~
+30 cdeh 0
+D5
+The stairs down return to the Temple of Midgaard
+~
+~
+0 -1 3001
 S
 $

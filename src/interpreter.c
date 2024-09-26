@@ -51,6 +51,7 @@ int isbanned(char *hostname);
 int Valid_Name(char *newname);
 void read_aliases(struct char_data *ch);
 void delete_aliases(const char *charname);
+void roll_abils(struct char_data *ch, struct char_ability_data *abils);
 
 /* local functions */
 int perform_dupe_check(struct descriptor_data *d);
@@ -1286,6 +1287,7 @@ int perform_dupe_check(struct descriptor_data *d)
 void nanny(struct descriptor_data *d, char *arg)
 {
   int load_result;	/* Overloaded variable */
+  int iarg;
 
   skip_spaces(&arg);
 
@@ -1694,6 +1696,108 @@ void nanny(struct descriptor_data *d, char *arg)
    * the game_loop() axe them.
    */
   case CON_CLOSE:
+    break;
+
+  case CON_REMORT_ROLL:
+    iarg = atoi(arg);
+
+    if (iarg == 1 || iarg == 2) {
+      if (iarg == 2) {
+	d->character->real_abils = d->character->new_abils;
+	d->character->aff_abils = d->character->new_abils;
+	affect_total(d->character);
+      }
+
+      STATE(d) = CON_REMORT_STAT1;
+      write_to_output(d,
+		      "\r\nAbilities: 1. Str %d/%d, 2. Int %d, 3. Wis %d, "
+		      "4. Dex %d, 5. Con %d, 6. Cha %d\r\n"
+		      "First ability to improve: ",
+		      GET_STR(d->character), GET_ADD(d->character), GET_INT(d->character),
+		      GET_WIS(d->character), GET_DEX(d->character), GET_CON(d->character),
+		      GET_CHA(d->character));
+    }
+    else {
+      roll_abils(d->character, &d->character->new_abils);
+      write_to_output(d,
+		      "1. Old Abilities: Str %d/%d, Int %d, Wis %d, Dex %d, Con %d, Cha %d\r\n"
+		      "2. New Abilities: Str %d/%d, Int %d, Wis %d, Dex %d, Con %d, Cha %d\r\n"
+		      "3. Reroll again.\r\n"
+		      "Choose option: ",
+		      GET_STR(d->character), GET_ADD(d->character), GET_INT(d->character),
+		      GET_WIS(d->character), GET_DEX(d->character), GET_CON(d->character),
+		      GET_CHA(d->character),
+		      d->character->new_abils.str,
+		      d->character->new_abils.str_add,
+		      d->character->new_abils.intel,
+		      d->character->new_abils.wis,
+		      d->character->new_abils.dex,
+		      d->character->new_abils.con,
+		      d->character->new_abils.cha);
+    }
+    break;
+
+  case CON_REMORT_STAT1:
+  case CON_REMORT_STAT2:
+    int iarg = atoi(arg);
+    if (iarg < 1 || iarg > 6)
+      break;
+
+    switch (iarg) {
+    case 1:
+      if (d->character->real_abils.str == 18) {
+	d->character->real_abils.str_add += 10;
+	if (d->character->real_abils.str_add > 100)
+	  d->character->real_abils.str_add = 100;
+      }
+      else
+	d->character->real_abils.str++;
+      break;
+    case 2:
+      if (d->character->real_abils.intel < 18)
+	d->character->real_abils.intel++;
+      break;
+    case 3:
+      if (d->character->real_abils.wis < 18)
+	d->character->real_abils.wis++;
+      break;
+    case 4:
+      if (d->character->real_abils.dex < 18)
+	d->character->real_abils.dex++;
+      break;
+    case 5:
+      if (d->character->real_abils.con < 18)
+	d->character->real_abils.con++;
+      break;
+    case 6:
+      if (d->character->real_abils.cha < 18)
+	d->character->real_abils.cha++;
+      break;
+    }
+
+    affect_total(d->character);
+    if (STATE(d) == CON_REMORT_STAT1) {
+      STATE(d) = CON_REMORT_STAT2;
+      write_to_output(d,
+		      "\r\nAbilities: 1. Str %d/%d, 2. Int %d, 3. Wis %d, "
+		      "4. Dex %d, 5. Con %d, 6. Cha %d\r\n"
+		      "Second ability to improve: ",
+		      GET_STR(d->character), GET_ADD(d->character), GET_INT(d->character),
+		      GET_WIS(d->character), GET_DEX(d->character), GET_CON(d->character),
+		      GET_CHA(d->character));
+    }
+    else {
+      STATE(d) = CON_PLAYING;
+      write_to_output(d,
+		      "\r\nYour Abilities: Str %d/%d, Int %d, Wis %d, Dex %d, Con %d, Cha %d\r\n",
+		      GET_STR(d->character), GET_ADD(d->character), GET_INT(d->character),
+		      GET_WIS(d->character), GET_DEX(d->character), GET_CON(d->character),
+		      GET_CHA(d->character));
+      save_char(d->character);
+      look_at_room(d->character, 0);
+      d->has_prompt = 0;
+    }
+
     break;
 
   default:

@@ -261,6 +261,9 @@
 #define CON_DELCNF1	 15	/* Delete confirmation 1		*/
 #define CON_DELCNF2	 16	/* Delete confirmation 2		*/
 #define CON_DISCONNECT	 17	/* In-game link loss (leave character)	*/
+#define CON_REMORT_ROLL	 18	/* Remort reroll			*/
+#define CON_REMORT_STAT1 19	/* Remort increase stat			*/
+#define CON_REMORT_STAT2 20	/* Remort increase stat			*/
 
 /* Character equipment positions: used as index for char_data.equipment[] */
 /* NOTE: Don't confuse these constants with the ITEM_ bitvectors
@@ -910,6 +913,7 @@ struct char_data {
    struct char_player_data player;       /* Normal data                   */
    struct char_ability_data real_abils;	 /* Abilities without modifiers   */
    struct char_ability_data aff_abils;	 /* Abils with spells/stones/etc  */
+   struct char_ability_data new_abils;	 /* Proposed rerolled abilities   */
    struct char_point_data points;        /* Points                        */
    struct char_special_data char_specials;	/* PC/NPC specials	  */
    struct player_special_data *player_specials; /* PC specials		  */

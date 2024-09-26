@@ -39,6 +39,7 @@ SPECIAL(thief);
 SPECIAL(magic_user);
 SPECIAL(bank);
 SPECIAL(gen_board);
+SPECIAL(room_of_introspection);
 void assign_kings_castle(void);
 
 /* local functions */
@@ -299,6 +300,7 @@ void assign_rooms(void)
 
   ASSIGNROOM(3030, dump);
   ASSIGNROOM(3031, pet_shops);
+  ASSIGNROOM(3067, room_of_introspection);
 
   if (dts_are_dumps)
     for (i = 0; i <= top_of_world; i++)

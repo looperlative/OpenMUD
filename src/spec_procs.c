@@ -31,6 +31,10 @@ ACMD(do_gen_door);
 ACMD(do_say);
 ACMD(do_action);
 int mag_manacost(struct char_data *ch, int spellnum);
+int level_exp(int chclass, int level);
+void do_start(struct char_data *ch);
+void run_autowiz(void);
+void roll_abils(struct char_data *ch, struct char_ability_data *abils);
 
 /* local functions */
 void sort_spells(void);
@@ -756,4 +760,81 @@ SPECIAL(bank)
     return (TRUE);
   } else
     return (FALSE);
+}
+
+
+SPECIAL(room_of_introspection)
+{
+  if (!CMD_IS("pray"))
+    return (FALSE);
+
+  skip_spaces(&argument);
+  if (strcmp(argument, "rebirth") == 0) {
+    if (GET_LEVEL(ch) > LVL_IMMORT) {
+	send_to_char(ch, "Gods may not use this room for rebirth\n");
+      return TRUE;
+    }
+    if (GET_LEVEL(ch) < LVL_IMMORT - 1 ||
+	(GET_LEVEL(ch) == LVL_IMMORT - 1 &&
+	 GET_EXP(ch) < level_exp(GET_CLASS(ch), GET_LEVEL(ch) + 1))) {
+	send_to_char(ch, "You are not experienced enough to choose this path\n");
+      return TRUE;
+    }
+
+    do_start(ch);
+    GET_LEVEL(ch) = 1;
+    REMOVE_BIT(PRF_FLAGS(ch), PRF_LOG1 | PRF_LOG2);
+    REMOVE_BIT(PRF_FLAGS(ch), PRF_NOHASSLE | PRF_HOLYLIGHT);
+    save_char(ch);
+    run_autowiz();
+
+    log("%s had been reborn.", GET_NAME(ch));
+    send_to_char(ch, "You have been reborn. You may improve your abilities.\n");
+    roll_abils(ch, &ch->new_abils);
+    send_to_char(ch,
+		 "1. Old Abilities: Str %d/%d, Int %d, Wis %d, Dex %d, Con %d, Cha %d\r\n"
+		 "2. New Abilities: Str %d/%d, Int %d, Wis %d, Dex %d, Con %d, Cha %d\r\n"
+		 "3. Reroll again.\r\n"
+		 "Choose option: ",
+		 GET_STR(ch), GET_ADD(ch), GET_INT(ch), GET_WIS(ch), GET_DEX(ch), GET_CON(ch),
+		 GET_CHA(ch),
+		 ch->new_abils.str, ch->new_abils.str_add,
+		 ch->new_abils.intel,
+		 ch->new_abils.wis,
+		 ch->new_abils.dex,
+		 ch->new_abils.con,
+		 ch->new_abils.cha);
+    STATE(ch->desc) = CON_REMORT_ROLL;
+  }
+  else if (strcmp(argument, "ascension") == 0) {
+    if (GET_LEVEL(ch) >= LVL_IMMORT) {
+      send_to_char(ch, "That's silly. You are already ascended\n");
+      return TRUE;
+    }
+    if (GET_LEVEL(ch) < LVL_IMMORT - 1 ||
+	GET_EXP(ch) < level_exp(GET_CLASS(ch), GET_LEVEL(ch) + 1)) {
+      send_to_char(ch, "You are not experienced enough to choose this path\n");
+      return TRUE;
+    }
+
+    for (int i = 0; i < NUM_WEARS; i++) {
+      if (GET_EQ(ch, i)) {
+	send_to_char(ch, "You must be naked of all worldly possesions to ascend.\n");
+	return TRUE;
+      }
+    }
+
+    if (ch->carrying) {
+      send_to_char(ch, "You must give up all worldly possesions to ascend.\n");
+      return TRUE;
+    }
+
+    int gain = level_exp(GET_CLASS(ch), GET_LEVEL(ch) + 1) - GET_EXP(ch);
+    gain_exp_regardless(ch, gain);
+    send_to_char(ch, "You have ascended to immortality.\n");
+  }
+  else
+    return FALSE;
+
+  return TRUE;
 }

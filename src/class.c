@@ -1394,7 +1394,7 @@ int thaco(int class_num, int level)
  * the best 3 out of 4 rolls of a 6-sided die.  Each class then decides
  * which priority will be given for the best to worst stats.
  */
-void roll_real_abils(struct char_data *ch)
+void roll_abils(struct char_data *ch, struct char_ability_data *abils)
 {
   int i, j, k, temp;
   ubyte table[6];
@@ -1436,44 +1436,49 @@ void roll_real_abils(struct char_data *ch)
     }
   }
 
-  ch->real_abils.str_add = 0;
+  abils->str_add = 0;
 
   switch (GET_CLASS(ch)) {
   case CLASS_MAGIC_USER:
-    ch->real_abils.intel = table[0];
-    ch->real_abils.wis = table[1];
-    ch->real_abils.dex = table[2];
-    ch->real_abils.str = table[3];
-    ch->real_abils.con = table[4];
-    ch->real_abils.cha = table[5];
+    abils->intel = table[0];
+    abils->wis = table[1];
+    abils->dex = table[2];
+    abils->str = table[3];
+    abils->con = table[4];
+    abils->cha = table[5];
     break;
   case CLASS_CLERIC:
-    ch->real_abils.wis = table[0];
-    ch->real_abils.intel = table[1];
-    ch->real_abils.str = table[2];
-    ch->real_abils.dex = table[3];
-    ch->real_abils.con = table[4];
-    ch->real_abils.cha = table[5];
+    abils->wis = table[0];
+    abils->intel = table[1];
+    abils->str = table[2];
+    abils->dex = table[3];
+    abils->con = table[4];
+    abils->cha = table[5];
     break;
   case CLASS_THIEF:
-    ch->real_abils.dex = table[0];
-    ch->real_abils.str = table[1];
-    ch->real_abils.con = table[2];
-    ch->real_abils.intel = table[3];
-    ch->real_abils.wis = table[4];
-    ch->real_abils.cha = table[5];
+    abils->dex = table[0];
+    abils->str = table[1];
+    abils->con = table[2];
+    abils->intel = table[3];
+    abils->wis = table[4];
+    abils->cha = table[5];
     break;
   case CLASS_WARRIOR:
-    ch->real_abils.str = table[0];
-    ch->real_abils.dex = table[1];
-    ch->real_abils.con = table[2];
-    ch->real_abils.wis = table[3];
-    ch->real_abils.intel = table[4];
-    ch->real_abils.cha = table[5];
-    if (ch->real_abils.str == 18)
-      ch->real_abils.str_add = rand_number(0, 100);
+    abils->str = table[0];
+    abils->dex = table[1];
+    abils->con = table[2];
+    abils->wis = table[3];
+    abils->intel = table[4];
+    abils->cha = table[5];
+    if (abils->str == 18)
+      abils->str_add = rand_number(0, 100);
     break;
   }
+}
+
+void roll_real_abils(struct char_data *ch)
+{
+  roll_abils(ch, &ch->real_abils);
   ch->aff_abils = ch->real_abils;
 }
 
