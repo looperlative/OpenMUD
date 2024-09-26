@@ -781,8 +781,26 @@ SPECIAL(room_of_introspection)
       return TRUE;
     }
 
-    do_start(ch);
     GET_LEVEL(ch) = 1;
+    GET_MAX_HIT(ch)  = 10;
+    GET_MAX_MANA(ch) = 100;
+    GET_MAX_MOVE(ch) = 82;
+    GET_HIT(ch) = GET_MAX_HIT(ch);
+    GET_MANA(ch) = GET_MAX_MANA(ch);
+    GET_MOVE(ch) = GET_MAX_MOVE(ch);
+
+    for (int i = 0; i <= MAX_SKILLS; i++)
+      SET_SKILL(ch, i, 0);
+
+    if (GET_CLASS(ch) == CLASS_THIEF) {
+      SET_SKILL(ch, SKILL_SNEAK, 10);
+      SET_SKILL(ch, SKILL_HIDE, 5);
+      SET_SKILL(ch, SKILL_STEAL, 15);
+      SET_SKILL(ch, SKILL_BACKSTAB, 10);
+      SET_SKILL(ch, SKILL_PICK_LOCK, 10);
+      SET_SKILL(ch, SKILL_TRACK, 10);
+    }
+
     REMOVE_BIT(PRF_FLAGS(ch), PRF_LOG1 | PRF_LOG2);
     REMOVE_BIT(PRF_FLAGS(ch), PRF_NOHASSLE | PRF_HOLYLIGHT);
     save_char(ch);
