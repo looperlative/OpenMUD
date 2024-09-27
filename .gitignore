@@ -3,6 +3,7 @@ bin/*
 lib/etc/time
 src/Makefile
 syslog
+syslog.CRASH
 config.cache
 config.log
 config.status
@@ -15,4 +16,5 @@ mudwho.html.last
 log/*
 lib/etc/board.immort
 lib/plralias
+lib/etc/players.*
 TAGS

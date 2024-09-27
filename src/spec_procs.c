@@ -788,6 +788,7 @@ SPECIAL(room_of_introspection)
     GET_HIT(ch) = GET_MAX_HIT(ch);
     GET_MANA(ch) = GET_MAX_MANA(ch);
     GET_MOVE(ch) = GET_MAX_MOVE(ch);
+    GET_EXP(ch) = 1;
 
     for (int i = 0; i <= MAX_SKILLS; i++)
       SET_SKILL(ch, i, 0);
