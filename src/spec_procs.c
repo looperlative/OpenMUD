@@ -789,6 +789,12 @@ SPECIAL(room_of_introspection)
     GET_MANA(ch) = GET_MAX_MANA(ch);
     GET_MOVE(ch) = GET_MAX_MOVE(ch);
     GET_EXP(ch) = 1;
+    ch->player.time.birth = time(0);
+    GET_PRACTICES(ch) = 0;
+    if (IS_MAGIC_USER(ch) || IS_CLERIC(ch))
+      GET_PRACTICES(ch) += MAX(2, wis_app[GET_WIS(ch)].bonus);
+    else
+      GET_PRACTICES(ch) += MIN(2, MAX(1, wis_app[GET_WIS(ch)].bonus));
 
     for (int i = 0; i <= MAX_SKILLS; i++)
       SET_SKILL(ch, i, 0);
