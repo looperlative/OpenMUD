@@ -1671,6 +1671,8 @@ void init_spell_levels(void)
   spell_level(SPELL_POISON, CLASS_MAGIC_USER, 14);
   spell_level(SPELL_FIREBALL, CLASS_MAGIC_USER, 15);
   spell_level(SPELL_CHARM, CLASS_MAGIC_USER, 16);
+  spell_level(SPELL_MEMORIZE, CLASS_MAGIC_USER, 20);
+  spell_level(SPELL_TELEPORT_TO, CLASS_MAGIC_USER, 20);
   spell_level(SPELL_ENCHANT_WEAPON, CLASS_MAGIC_USER, 26);
   spell_level(SPELL_CLONE, CLASS_MAGIC_USER, 30);
 

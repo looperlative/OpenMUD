@@ -88,6 +88,8 @@
 #define SPELL_INFRAVISION	     50 /* Reserved Skill[] DO NOT CHANGE */
 #define SPELL_WATERWALK		     51 /* Reserved Skill[] DO NOT CHANGE */
 /* Insert new spells here, up to MAX_SPELLS */
+#define SPELL_MEMORIZE		     52 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_TELEPORT_TO            53 /* Reserved Skill[] DO NOT CHANGE */
 #define MAX_SPELLS		    130
 
 /* PLAYER SKILLS - Numbered from MAX_SPELLS+1 to MAX_SKILLS */
@@ -166,6 +168,7 @@
 #define TAR_OBJ_ROOM    (1 << 8)
 #define TAR_OBJ_WORLD   (1 << 9)
 #define TAR_OBJ_EQUIP	(1 << 10)
+#define TAR_MEMORY_SLOT	(1 << 11)
 
 struct spell_info_type {
    byte min_position;	/* Position for caster	 */
@@ -220,6 +223,8 @@ void	spellname(int level, struct char_data *ch, \
 ASPELL(spell_create_water);
 ASPELL(spell_recall);
 ASPELL(spell_teleport);
+ASPELL(spell_teleport_to);
+ASPELL(spell_memorize);
 ASPELL(spell_summon);
 ASPELL(spell_locate_object);
 ASPELL(spell_charm);

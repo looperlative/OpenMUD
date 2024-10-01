@@ -21,7 +21,7 @@ by 1, and furthermore improve the hitroll by 2.
 
 Bless on an item currently has no defined action.  It is only possible
 to bless non-evil items, and the object blessed may weigh no more
-than five pounds per level of caster. 
+than five pounds per level of caster.
 #
 BLINDNESS
 
@@ -201,7 +201,7 @@ Level       : Mage level 14.
 
 Curse cast on a person that fails the saving throw, will reduce their
 hitroll and damage roll both by one.  It will also reduce the saving
-throw versus paralysation by one. 
+throw versus paralysation by one.
 
 When cast upon an object, the object will become undropable.
 #
@@ -425,6 +425,18 @@ Save        : Versus spell for half damage.
 Causes a bolt of magical energy to be thrown from the casters hands at the
 victim.
 #
+MEMORIZE
+
+Usage       : cast 'memorize' <memory>
+Accumulative: -
+Duration    : Instantaneous
+Level       : Mage level 20.
+
+Allows mage to remember a location.  They can then use "TELEPORT TO" to
+return to this memorized location
+
+See also: "TELEPORT TO"
+#
 POISON
 
 Usage       : cast 'poison' <victim | food | drink>
@@ -460,7 +472,7 @@ Will remove a curse on carried objects or any persons in the room.
 #
 "REMOVE POISON"
 
-Usage       : cast 'remove poison' <victim | food | drink> 
+Usage       : cast 'remove poison' <victim | food | drink>
 Accumulative: No
 Duration    : Instantaneous
 Level       : Cleric level 10.
@@ -529,6 +541,17 @@ If you attempt to summon a monster, it will get a saving throw.
 
 See also: NOSUMMON
 #
+"TELEPORT TO"
+
+Usage       : cast 'teleport to' <memory>
+Accumulative: -
+Duration    : Instantaneous
+Level       : Mage level 20.
+
+Allows mage to teleport to a location that they previously memorized.
+
+See also: MEMORIZE
+#
 VENTRILOQUATE
 
 Usage       : cast 'ventriloquate' <victim | object> <text>
@@ -546,7 +569,7 @@ Example:
 #
 "WORD OF RECALL"
 
-Usage       : cast 'word of recall' 
+Usage       : cast 'word of recall'
 Accumulative: -
 Duration    : Instantaneous
 Level       : Cleric level 12.

@@ -724,6 +724,13 @@ void do_stat_character(struct char_data *ch, struct char_data *k)
       send_to_char(ch, "\r\n");
   }
 
+  /* Damage/fighting statistics. */
+  int avg_dam = 0;
+  if (k->total_fighting_rounds > 0)
+      avg_dam = k->total_damage_inflicted / k->total_fighting_rounds;
+  send_to_char(ch, "Damage inflicted %d, Total rounds %d, Avg Dam/Round %d\r\n",
+	       k->total_damage_inflicted, k->total_fighting_rounds, avg_dam);
+
   /* Showing the bitvector */
   sprintbit(AFF_FLAGS(k), affected_bits, buf, sizeof(buf));
   send_to_char(ch, "AFF: %s%s%s\r\n", CCYEL(ch, C_NRM), buf, CCNRM(ch, C_NRM));

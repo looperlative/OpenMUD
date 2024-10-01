@@ -281,6 +281,8 @@ int call_magic(struct char_data *caster, struct char_data *cvict,
     case SPELL_SUMMON:		MANUAL_SPELL(spell_summon); break;
     case SPELL_WORD_OF_RECALL:  MANUAL_SPELL(spell_recall); break;
     case SPELL_TELEPORT:	MANUAL_SPELL(spell_teleport); break;
+    case SPELL_MEMORIZE:	MANUAL_SPELL(spell_memorize); break;
+    case SPELL_TELEPORT_TO:	MANUAL_SPELL(spell_teleport_to); break;
     }
 
   return (1);
@@ -557,6 +559,13 @@ ACMD(do_cast)
   if (IS_SET(SINFO.targets, TAR_IGNORE)) {
     target = TRUE;
   } else if (t != NULL && *t) {
+    if (!target && (IS_SET(SINFO.targets, TAR_MEMORY_SLOT))) {
+      int n = atoi(t);
+      if (n >= 1 && n <= MAX_MEMORIES) {
+	ch->memory_slot = n;
+	target = TRUE;
+      }
+    }
     if (!target && (IS_SET(SINFO.targets, TAR_CHAR_ROOM))) {
       if ((tch = get_char_vis(ch, t, NULL, FIND_CHAR_ROOM)) != NULL)
 	target = TRUE;
@@ -669,6 +678,7 @@ void spell_level(int spell, int chclass, int level)
 
 
 /* Assign the spells on boot up */
+
 void spello(int spl, const char *name, int max_mana, int min_mana,
 	int mana_change, int minpos, int targets, int violent, int routines, const char *wearoff)
 {
@@ -776,7 +786,7 @@ void mag_assign_spells(void)
 	TAR_CHAR_ROOM | TAR_NOT_SELF, FALSE, MAG_AFFECTS,
 	"You feel a cloak of blindness dissolve.");
 
-  spello(SPELL_BURNING_HANDS, "burning hands", 30, 10, 3, POS_FIGHTING,
+  spello(SPELL_BURNING_HANDS, "burning hands", 30, 2, 3, POS_FIGHTING,
 	TAR_CHAR_ROOM | TAR_FIGHT_VICT, TRUE, MAG_DAMAGE,
 	NULL);
 
@@ -788,7 +798,7 @@ void mag_assign_spells(void)
 	TAR_CHAR_ROOM | TAR_NOT_SELF, TRUE, MAG_MANUAL,
 	"You feel more self-confident.");
 
-  spello(SPELL_CHILL_TOUCH, "chill touch", 30, 10, 3, POS_FIGHTING,
+  spello(SPELL_CHILL_TOUCH, "chill touch", 30, 1, 3, POS_FIGHTING,
 	TAR_CHAR_ROOM | TAR_FIGHT_VICT, TRUE, MAG_DAMAGE | MAG_AFFECTS,
 	"You feel your strength return.");
 
@@ -796,7 +806,7 @@ void mag_assign_spells(void)
 	TAR_SELF_ONLY, FALSE, MAG_SUMMONS,
 	NULL);
 
-  spello(SPELL_COLOR_SPRAY, "color spray", 30, 15, 3, POS_FIGHTING,
+  spello(SPELL_COLOR_SPRAY, "color spray", 30, 5, 3, POS_FIGHTING,
 	TAR_CHAR_ROOM | TAR_FIGHT_VICT, TRUE, MAG_DAMAGE,
 	NULL);
 
@@ -860,7 +870,7 @@ void mag_assign_spells(void)
 	TAR_OBJ_INV, FALSE, MAG_MANUAL,
 	NULL);
 
-  spello(SPELL_ENERGY_DRAIN, "energy drain", 40, 25, 1, POS_FIGHTING,
+  spello(SPELL_ENERGY_DRAIN, "energy drain", 75, 7, 4, POS_FIGHTING,
 	TAR_CHAR_ROOM | TAR_FIGHT_VICT, TRUE, MAG_DAMAGE | MAG_MANUAL,
 	NULL);
 
@@ -868,7 +878,7 @@ void mag_assign_spells(void)
 	TAR_IGNORE, FALSE, MAG_GROUPS,
 	NULL);
 
-  spello(SPELL_FIREBALL, "fireball", 40, 30, 2, POS_FIGHTING,
+  spello(SPELL_FIREBALL, "fireball", 40, 6, 4, POS_FIGHTING,
 	TAR_CHAR_ROOM | TAR_FIGHT_VICT, TRUE, MAG_DAMAGE,
 	NULL);
 
@@ -892,7 +902,7 @@ void mag_assign_spells(void)
 	TAR_CHAR_ROOM | TAR_OBJ_INV | TAR_OBJ_ROOM, FALSE, MAG_AFFECTS | MAG_ALTER_OBJS,
 	"You feel yourself exposed.");
 
-  spello(SPELL_LIGHTNING_BOLT, "lightning bolt", 30, 15, 1, POS_FIGHTING,
+  spello(SPELL_LIGHTNING_BOLT, "lightning bolt", 30, 4, 3, POS_FIGHTING,
 	TAR_CHAR_ROOM | TAR_FIGHT_VICT, TRUE, MAG_DAMAGE,
 	NULL);
 
@@ -900,8 +910,12 @@ void mag_assign_spells(void)
 	TAR_OBJ_WORLD, FALSE, MAG_MANUAL,
 	NULL);
 
-  spello(SPELL_MAGIC_MISSILE, "magic missile", 25, 10, 3, POS_FIGHTING,
+  spello(SPELL_MAGIC_MISSILE, "magic missile", 25, 1, 3, POS_FIGHTING,
 	TAR_CHAR_ROOM | TAR_FIGHT_VICT, TRUE, MAG_DAMAGE,
+	NULL);
+
+  spello(SPELL_MEMORIZE, "memorize", 50, 25, 3, POS_STANDING,
+	TAR_MEMORY_SLOT, TRUE, MAG_MANUAL,
 	NULL);
 
   spello(SPELL_POISON, "poison", 50, 20, 3, POS_STANDING,
@@ -930,7 +944,7 @@ void mag_assign_spells(void)
 	TAR_CHAR_ROOM | TAR_SELF_ONLY, FALSE, MAG_AFFECTS,
 	"You feel less aware of your surroundings.");
 
-  spello(SPELL_SHOCKING_GRASP, "shocking grasp", 30, 15, 3, POS_FIGHTING,
+  spello(SPELL_SHOCKING_GRASP, "shocking grasp", 30, 3, 3, POS_FIGHTING,
 	TAR_CHAR_ROOM | TAR_FIGHT_VICT, TRUE, MAG_DAMAGE,
 	NULL);
 
@@ -948,6 +962,10 @@ void mag_assign_spells(void)
 
   spello(SPELL_TELEPORT, "teleport", 75, 50, 3, POS_STANDING,
 	TAR_CHAR_ROOM, FALSE, MAG_MANUAL,
+	NULL);
+
+  spello(SPELL_TELEPORT_TO, "teleport to", 50, 25, 3, POS_STANDING,
+	TAR_MEMORY_SLOT, TRUE, MAG_MANUAL,
 	NULL);
 
   spello(SPELL_WATERWALK, "waterwalk", 40, 20, 2, POS_STANDING,

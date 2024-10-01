@@ -100,6 +100,49 @@ ASPELL(spell_teleport)
   look_at_room(victim, 0);
 }
 
+ASPELL(spell_teleport_to)
+{
+  if (ch == NULL || IS_NPC(ch))
+    return;
+
+  room_vnum v_room = ch->player_specials->saved.memories[ch->memory_slot - 1];
+  if (v_room == 0) {
+    send_to_char(ch, "You don't seem to have anything memorized there!\r\n");
+    return;
+  }
+
+  room_rnum to_room = real_room(v_room);
+  if (to_room == NOWHERE) {
+    send_to_char(ch, "Your memorized room doesn't exist anymore!\r\n");
+    return;
+  }
+
+  act("$n slowly fades out of existence and is gone.",
+      FALSE, ch, 0, 0, TO_ROOM);
+  char_from_room(ch);
+  char_to_room(ch, to_room);
+  act("$n slowly fades into existence.", FALSE, ch, 0, 0, TO_ROOM);
+  look_at_room(ch, 0);
+}
+
+ASPELL(spell_memorize)
+{
+  if (ch == NULL || IS_NPC(ch))
+    return;
+
+  room_rnum hereidx = IN_ROOM(ch);
+  if (ROOM_FLAGGED(hereidx, ROOM_PRIVATE | ROOM_DEATH | ROOM_GODROOM)) {
+    send_to_char(ch, "You can't memorize this room!\r\n");
+    return;
+  }
+
+  room_vnum here = world[hereidx].number;
+  mudlog(CMP, LVL_IMPL, TRUE, "%s (slot %d) memorizing room [%d] %s.",
+	 GET_NAME(ch), ch->memory_slot, here, world[IN_ROOM(ch)].name);
+
+  ch->player_specials->saved.memories[ch->memory_slot - 1] = here;
+}
+
 #define SUMMON_FAIL "You failed.\r\n"
 
 ASPELL(spell_summon)

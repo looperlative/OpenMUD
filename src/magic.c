@@ -168,6 +168,7 @@ int mag_damage(int level, struct char_data *ch, struct char_data *victim,
 		     int spellnum, int savetype)
 {
   int dam = 0;
+  int no_save = 0;
 
   if (victim == NULL || ch == NULL)
     return (0);
@@ -244,10 +245,11 @@ int mag_damage(int level, struct char_data *ch, struct char_data *victim,
     break;
 
   case SPELL_ENERGY_DRAIN:
-    if (GET_LEVEL(victim) <= 2)
-      dam = 100;
+    if (IS_MAGIC_USER(ch))
+      dam = dice(13, 8) + 13;
     else
-      dam = dice(1, 10);
+      dam = dice(13, 6) + 13;
+    no_save = 1;
     break;
 
     /* Area spells */
@@ -257,9 +259,11 @@ int mag_damage(int level, struct char_data *ch, struct char_data *victim,
 
   } /* switch(spellnum) */
 
+  /* Need an adjustment to make spell damage significant enough compared to warriors. */
+  dam *= 2;
 
   /* divide damage by two if victim makes his saving throw */
-  if (mag_savingthrow(victim, savetype, 0))
+  if (!no_save && mag_savingthrow(victim, savetype, 0))
     dam /= 2;
 
   /* and finally, inflict the damage */

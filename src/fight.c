@@ -741,6 +741,8 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
   dam = MAX(MIN(dam, 100), 0);
   GET_HIT(victim) -= dam;
 
+  ch->total_damage_inflicted += dam;
+
   /* Gain exp for the hit */
   if (ch != victim)
     gain_exp(ch, GET_LEVEL(victim) * dam);
@@ -1006,6 +1008,8 @@ void perform_violence(void)
         (leader->in_room == ch->in_room) &&
 	!FIGHTING(leader))
       do_assist(leader, GET_NAME(ch), 0, 0);
+
+    ch->total_fighting_rounds++;
 
     hit(ch, FIGHTING(ch), TYPE_UNDEFINED);
     if (!IS_NPC(leader) && FIGHTING(ch) && GET_SKILL(ch, SKILL_ATTACK2) >= rand_number(1, 101)) {

@@ -510,6 +510,7 @@
 #define MAX_AFFECT		32  /* Used in char_file_u *DO*NOT*CHANGE* */
 #define MAX_OBJ_AFFECT		6 /* Used in obj_file_elem *DO*NOT*CHANGE* */
 #define MAX_NOTE_LENGTH		1000	/* arbitrary */
+#define MAX_MEMORIES		6   /* Used in char_file_u *DO*NOT*CHANGE* */
 
 /*
  * A MAX_PWD_LENGTH of 10 will cause BSD-derived systems with MD5 passwords
@@ -837,9 +838,7 @@ struct player_special_data_saved {
    ubyte spare4;
    ubyte spare5;
    int spells_to_learn;		/* How many can you learn yet this level*/
-   int spare7;
-   int spare8;
-   int spare9;
+   unsigned short memories[MAX_MEMORIES];
    int spare10;
    int spare11;
    int spare12;
@@ -931,6 +930,11 @@ struct char_data {
 
    struct follow_type *followers;        /* List of chars followers       */
    struct char_data *master;             /* Who is char following?        */
+
+   int total_damage_inflicted;		 /* Accumulated damage inflicted  */
+   int total_fighting_rounds;		 /* Number of rounds fighting     */
+
+   int memory_slot;			 /* Memory slot target		  */
 };
 /* ====================================================================== */
 
