@@ -54,6 +54,7 @@ void print_object_location(int num, struct obj_data *obj, struct char_data *ch, 
 void show_obj_to_char(struct obj_data *obj, struct char_data *ch, int mode);
 void list_obj_to_char(struct obj_data *list, struct char_data *ch, int mode, int show);
 void show_obj_modifiers(struct obj_data *obj, struct char_data *ch);
+ACMD(do_memories);
 ACMD(do_look);
 ACMD(do_examine);
 ACMD(do_gold);
@@ -622,6 +623,21 @@ void look_at_target(struct char_data *ch, char *arg)
     send_to_char(ch, "You do not see that here.\r\n");
 }
 
+ACMD(do_memories)
+{
+  for (int i = 0; i < MAX_MEMORIES; i++)
+  {
+    room_vnum v_room = ch->player_specials->saved.memories[i];
+    if (v_room == 0)
+      continue;
+
+    room_rnum r_room = real_room(v_room);
+    if (r_room == NOWHERE)
+      continue;
+
+    send_to_char(ch, "Memory %d: %s\n", i+1, world[r_room].name);
+  }
+}
 
 ACMD(do_look)
 {
