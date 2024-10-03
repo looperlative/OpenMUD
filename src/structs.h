@@ -264,6 +264,7 @@
 #define CON_REMORT_ROLL	 18	/* Remort reroll			*/
 #define CON_REMORT_STAT1 19	/* Remort increase stat			*/
 #define CON_REMORT_STAT2 20	/* Remort increase stat			*/
+#define CON_OLC_EDIT	 21	/* Used for MEDIT, REDIT, OEDIT		*/
 
 /* Character equipment positions: used as index for char_data.equipment[] */
 /* NOTE: Don't confuse these constants with the ITEM_ bitvectors
@@ -1016,6 +1017,8 @@ struct descriptor_data {
    struct descriptor_data *snooping; /* Who is this char snooping	*/
    struct descriptor_data *snoop_by; /* And who is snooping this char	*/
    struct descriptor_data *next; /* link to next descriptor		*/
+
+   int  olc_editor_idx;
 };
 
 

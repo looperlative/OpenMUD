@@ -1,353 +1,393 @@
-/* ************************************************************************
-*   File: olc.c                                         Part of CircleMUD *
-*  Usage: online creation                                                 *
-*                                                                         *
-*  All rights reserved.  See license.doc for complete information.        *
-*                                                                         *
-*  Copyright (C) 1993, 94 by the Trustees of the Johns Hopkins University *
-*  CircleMUD is based on DikuMUD, Copyright (C) 1990, 1991.               *
-************************************************************************ */
-
-/*
- * PLEASE, FOR THE LOVE OF GOD, DON'T TRY TO USE THIS YET!!!
- *  *** DO *** NOT *** SEND ME MAIL ASKING WHY IT DOESN'T WORK -- IT'S
- *  NOT DONE!!
+/* OLC.C
+ *
+ * This file contains my OLC system for CircleMUD.  I'm providing my
+ * code with a more lenient MIT-style specified below.
+ *
+ * Copyright 2024 - Robert Amstadt
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the “Software”), to deal in the Software without
+ * restriction, including without limitation the rights to use, copy,
+ * modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+ * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
-
 #include "conf.h"
 #include "sysdep.h"
-
 #include "structs.h"
-#include "utils.h"
-#include "comm.h"
 #include "interpreter.h"
-#include "handler.h"
+#include "utils.h"
 #include "db.h"
+#include "comm.h"
+#include "screen.h"
+#include "constants.h"
 #include "olc.h"
 
-/* OLC command format:
- *
- * olc {"." | {<"room"|"mobile"|"object"> <number>}} <arguments>
- * olc {"set"|"show"} <attribute> <arguments>
- */
+struct olc_editor_s olc_editors[MAX_EDITORS];
 
-#define OLC_USAGE "Usage: olc { . | set | show | obj | mob | room} [args]\r\n"
-
-/* local globals */
-struct char_data *olc_ch;
-
-/* local functions */
-void olc_interpreter(void *targ, int mode, char *arg);
-void olc_set_show(struct char_data *ch, int olc_mode, char *arg);
-void olc_string(char **string, size_t maxlen, char *arg);
-int can_modify(struct char_data *ch, int vnum);
-ACMD(do_olc);
-void olc_bitvector(int *bv, const char **names, char *arg);
-
-const char *olc_modes[] = {
-  "set",			/* set OLC characteristics */
-  "show",			/* show OLC characteristics */
-  ".",				/* repeat last modification command */
-  "room",			/* modify a room */
-  "mobile",			/* modify a mobile */
-  "object",			/* modify an object */
-  "\n"
-};
-
-const char *olc_commands[] = {
-  "copy",
-  "name",
-  "description",
-  "aliases",
-  "\n",				/* many more to be added */
-};
-
-
-/* The actual do_olc command for the interpreter.  Determines the target
-   entity, checks permissions, and passes control to olc_interpreter */
-ACMD(do_olc)
+void olc_clear_editor(int idx)
 {
-  void *olc_targ = NULL;
-  char mode_arg[MAX_INPUT_LENGTH], arg[MAX_INPUT_LENGTH];
-  room_rnum rnum;
-  room_vnum vnum = NOWHERE;
-  int olc_mode;
+    struct olc_editor_s *ed = &olc_editors[idx];
 
-  /* WARNING!  **DO NOT** under any circumstances remove the code below!!!!  */
-  if (strcmp(GET_NAME(ch), "Ras")) {
-    send_to_char(ch, "OLC is not yet complete.  Sorry.\r\n");
-    return;
-  }
-  /* WARNING!  **DO NOT** under any circumstances remove the code above!!!!  */
+    // Should free any allocated memory held by this editor.
 
-  /* first, figure out the first (mode) argument */
-  half_chop(argument, mode_arg, argument);
-  if ((olc_mode = search_block(mode_arg, olc_modes, FALSE)) < 0) {
-    send_to_char(ch, "Invalid mode '%s'.\r\n%s", mode_arg, OLC_USAGE);
-    return;
-  }
-  switch (olc_mode) {
-  case OLC_SET:
-  case OLC_SHOW:
-    olc_set_show(ch, olc_mode, argument);
-    return;
-  case OLC_REPEAT:
-    if (!(olc_mode = GET_LAST_OLC_MODE(ch)) ||
-	((olc_targ = GET_LAST_OLC_TARG(ch)) == NULL)) {
-      send_to_char(ch, "No last OLC operation!\r\n");
-      return;
+    // Clear the editor.
+    memset(ed, 0, sizeof(*ed));
+}
+
+void olc_create_editor(struct char_data *ch)
+{
+    ch->desc->olc_editor_idx = 0;
+
+    for (int i = 0; i < MAX_EDITORS; i++)
+    {
+	if (olc_editors[i].idnum == 0)
+	{
+	    memset(olc_editors + i, 0, sizeof(olc_editors[i]));
+	    olc_editors[i].idnum = GET_IDNUM(ch);
+	    olc_editors[i].state = 0;
+	    ch->desc->olc_editor_idx = i;
+	}
     }
-    break;
-  case OLC_ROOM:
-    if (isdigit(*argument)) {
-      /* room specified.  take the numeric argument off */
-      argument = one_argument(argument, arg);
-      if (!is_number(arg)) {
-	send_to_char(ch, "Invalid room vnum '%s'.\r\n", arg);
+}
+
+void olc_handle_toggleedit(struct descriptor_data *d, struct olc_editor_s *ed, char *arg)
+{
+    struct char_data *ch = d->character;
+    char buf[MAX_STRING_LENGTH];
+
+    if (*arg == '.')
+    {
+	ed->flags_field = NULL;
+	ed->bit_names = NULL;
+	ed->n_bits = 0;
+	ed->field_name = NULL;
+	ed->state = ed->state_after;
+	olc_nanny(d, "");
 	return;
-      }
-      vnum = atoi(arg);
-      if ((rnum = real_room(vnum)) == NOWHERE) {
-	send_to_char(ch, "No such room!\r\n");
+    }
+    else
+    {
+	int n = atoi(arg);
+	if (n >= 1 && n <= ed->n_bits && ed->bit_names[n-1][0] != '*')
+	    *ed->flags_field ^= (1 << (n - 1));
+    }
+
+    sprintbit(*ed->flags_field, ed->bit_names, buf, sizeof(buf));
+    send_to_char(ch, "Current %s: %s", ed->field_name, buf);
+
+    int i = 0;
+    for ( ; *ed->bit_names[i] != '\n'; i++)
+    {
+	if ((i & 3) == 0)
+	    send_to_char(ch, "\r\n  ");
+	if (*ed->bit_names[i] == '*')
+	    continue;
+
+	send_to_char(ch, "%2d) %-16s ", i + 1, ed->bit_names[i]);
+    }
+    ed->n_bits = i;
+
+    send_to_char(ch, "\r\nSelect bit to toggle or '.' to end: ");
+}
+
+void olc_start_toggleedit(struct descriptor_data *d, struct olc_editor_s *ed,
+			  char *field_name, int *flags_field, const char *bit_names[])
+{
+    ed->field_name = field_name;
+    ed->bit_names = bit_names;
+    ed->flags_field = flags_field;
+    ed->state = OLC_STATE_TOGGLEEDIT;
+    ed->n_bits = 0;
+
+    olc_handle_toggleedit(d, ed, "");
+}
+
+void olc_handle_typeedit(struct descriptor_data *d, struct olc_editor_s *ed, char *arg)
+{
+    struct char_data *ch = d->character;
+    char buf[MAX_STRING_LENGTH];
+
+    if (*arg == '.')
+    {
+	ed->flags_field = NULL;
+	ed->bit_names = NULL;
+	ed->n_bits = 0;
+	ed->field_name = NULL;
+	ed->state = ed->state_after;
+	olc_nanny(d, "");
 	return;
-      }
-    } else {
-      rnum = IN_ROOM(ch);
-      vnum = GET_ROOM_VNUM(IN_ROOM(ch));
-      send_to_char(ch, "(Using current room %d)\r\n", vnum);
     }
-
-/*   if (!ROOM_FLAGGED(rnum, ROOM_OLC))
-	 send_to_char(ch, "That room is not modifyable.\r\n");
-     else
-*/
-    olc_targ = (void *) &(world[rnum]);
-    break;
-  case OLC_MOB:
-    argument = one_argument(argument, arg);
-    if (!is_number(arg)) {
-      send_to_char(ch, "Invalid mob vnum '%s'.\r\n", arg);
-      return;
-    }
-    vnum = atoi(arg);
-    if ((rnum = real_mobile(vnum)) == NOBODY)
-      send_to_char(ch, "No such mobile vnum.\r\n");
     else
-      olc_targ = (void *) &(mob_proto[rnum]);
-    break;
-  case OLC_OBJ:
-    argument = one_argument(argument, arg);
-    if (!is_number(arg)) {
-      send_to_char(ch, "Invalid obj vnum '%s'\r\n", arg);
-      return;
+    {
+	int n = atoi(arg);
+	if (n >= 1 && n <= ed->n_bits && ed->bit_names[n-1][0] != '*')
+	    *ed->flags_field = n - 1;
     }
-    vnum = atoi(arg);
-    if ((rnum = real_object(vnum)) == NOTHING)
-      send_to_char(ch, "No object with vnum %d.\r\n", vnum);
+
+    sprinttype(*ed->flags_field, ed->bit_names, buf, sizeof(buf));
+    send_to_char(ch, "Current %s: %s", ed->field_name, buf);
+
+    int i = 0;
+    for ( ; *ed->bit_names[i] != '\n'; i++)
+    {
+	if ((i & 3) == 0)
+	    send_to_char(ch, "\r\n  ");
+	if (*ed->bit_names[i] == '*')
+	    continue;
+
+	send_to_char(ch, "%2d) %-16s ", i + 1, ed->bit_names[i]);
+    }
+    ed->n_bits = i;
+
+    send_to_char(ch, "\r\nSelect new type or '.' to end: ");
+}
+
+void olc_start_typeedit(struct descriptor_data *d, struct olc_editor_s *ed,
+			char *field_name, int *type_field, const char *type_names[])
+{
+    ed->field_name = field_name;
+    ed->bit_names = type_names;
+    ed->flags_field = type_field;
+    ed->state = OLC_STATE_TYPEEDIT;
+    ed->n_bits = 0;
+
+    olc_handle_typeedit(d, ed, "");
+}
+
+void olc_start_textedit(struct descriptor_data *d, struct olc_editor_s *ed,
+			char *field_name, char **string, int is_single_line)
+{
+    struct char_data *ch = d->character;
+
+    ed->field_name = field_name;
+    ed->text_edit_string = string;
+    if (*ed->text_edit_string != NULL)
+    {
+	free(*ed->text_edit_string);
+	*ed->text_edit_string = strdup("");
+    }
+
+    ed->single_line = is_single_line;
+    ed->state = OLC_STATE_TEXTEDIT;
+
+    send_to_char(ch, "Enter new value for '%s'%s",
+		 field_name,
+		 is_single_line ? ":\r\n" : "\r\n(enter . at start of line to end editting):\r\n");
+}
+
+void olc_handle_textedit(struct descriptor_data *d, struct olc_editor_s *ed, char *arg)
+{
+    if (ed->single_line)
+    {
+	if (*ed->text_edit_string != NULL)
+	    free(*ed->text_edit_string);
+	*ed->text_edit_string = strdup(arg);
+
+    	ed->field_name = NULL;
+	ed->text_edit_string = NULL;
+	ed->single_line = 0;
+	ed->state = ed->state_after;
+	olc_nanny(d, "");
+    }
+    else if (*arg == '.')
+    {
+	ed->field_name = NULL;
+	ed->text_edit_string = NULL;
+	ed->single_line = 0;
+	ed->state = ed->state_after;
+	olc_nanny(d, "");
+    }
     else
-      olc_targ = (void *) &(obj_proto[rnum]);
-    break;
-  default:
-    send_to_char(ch, "Usage: olc {.|set|show|obj|mob|room} [args]\r\n");
-    return;
-  }
-
-  if (olc_targ == NULL)
-    return;
-
-  if (!can_modify(ch, vnum)) {
-    send_to_char(ch, "You can't modify that.\r\n");
-    return;
-  }
-  GET_LAST_OLC_MODE(ch) = olc_mode;
-  GET_LAST_OLC_TARG(ch) = olc_targ;
-
-  olc_ch = ch;
-  olc_interpreter(olc_targ, olc_mode, argument);
-  /* freshen? */
+    {
+	char *s1 = *ed->text_edit_string;
+	CREATE(*ed->text_edit_string, char, strlen(s1) + strlen(arg) + 3);
+	strcpy(*ed->text_edit_string, s1);
+	strcat(*ed->text_edit_string, "\r\n");
+	strcat(*ed->text_edit_string, arg);
+    }
 }
 
+static char directions[6] = "NESWUD";
 
-/* OLC interpreter command; called by do_olc */
-void olc_interpreter(void *targ, int mode, char *arg)
+void olc_redit_display_top(struct descriptor_data *d, struct olc_editor_s *ed)
 {
-  int error = 0, command;
-  char command_string[MAX_INPUT_LENGTH];
-  struct char_data *olc_mob = NULL;
-  struct room_data *olc_room = NULL;
-  struct obj_data *olc_obj = NULL;
+    char buf[MAX_STRING_LENGTH];
 
-  half_chop(arg, command_string, arg);
-  if ((command = search_block(command_string, olc_commands, FALSE)) < 0) {
-    send_to_char(olc_ch, "Invalid OLC command '%s'.\r\n", command_string);
-    return;
-  }
-  switch (mode) {
-  case OLC_ROOM:
-    olc_room = (struct room_data *) targ;
-    break;
-  case OLC_MOB:
-    olc_mob = (struct char_data *) targ;
-    break;
-  case OLC_OBJ:
-    olc_obj = (struct obj_data *) targ;
-    break;
-  default:
-    log("SYSERR: Invalid OLC mode %d passed to interp.", mode);
-    return;
-  }
+    struct char_data *ch = d->character;
+    int room_rnum = real_room(ed->room_vnum);
+    struct room_data *room = &world[room_rnum];
 
+    send_to_char(ch, "%sRoom %d%s\r\n", CCCYN(ch, C_NRM), ed->room_vnum, CCNRM(ch, C_NRM));
+    send_to_char(ch, "%s 1) Name: %s%s\r\n", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), room->name);
+    send_to_char(ch, "%s 2) Description:%s\r\n%s\r\n", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM),
+		 room->description);
+    sprintbit(room->room_flags, room_bits, buf, sizeof(buf));
+    send_to_char(ch, "%s 3) Flags: %s%s\r\n", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), buf);
+    sprinttype(room->sector_type, sector_types, buf, sizeof(buf));
+    send_to_char(ch, "%s 4) Sector Type: %s%s\r\n", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), buf);
 
-  switch (command) {
-  case OLC_COPY:
-    switch (mode) {
-    case OLC_ROOM:
-      break;
-    case OLC_MOB:
-      break;
-    case OLC_OBJ:
-      break;
-    default:
-      error = 1;
-      break;
-    }
-    break;
-  case OLC_NAME:
-    switch (mode) {
-    case OLC_ROOM:
-      olc_string(&(olc_room->name), MAX_ROOM_NAME, arg);
-      break;
-    case OLC_MOB:
-      olc_string(&olc_mob->player.short_descr, MAX_MOB_NAME, arg);
-      break;
-    case OLC_OBJ:
-      olc_string(&olc_obj->short_description, MAX_OBJ_NAME, arg);
-      break;
-    default:
-      error = 1;
-      break;
-    }
-    break;
+    send_to_char(ch, "%sExits:\r\n", CCCYN(ch, C_NRM));
+    for (int i = 0; i < NUM_OF_DIRS; i++)
+    {
+	struct room_direction_data *exit = room->dir_option[i];
 
-  case OLC_DESC:
-    switch (mode) {
-    case OLC_ROOM:
-      olc_string(&olc_room->description, MAX_ROOM_DESC, arg);
-      break;
-    case OLC_MOB:
-      olc_string(&olc_mob->player.long_descr, MAX_MOB_DESC, arg);
-      break;
-    case OLC_OBJ:
-      olc_string(&olc_obj->description, MAX_OBJ_DESC, arg);
-      break;
-    default:
-      error = 1;
-      break;
-    }
-    break;
-
-  case OLC_ALIASES:
-    switch (mode) {
-    case OLC_ROOM:
-      break;
-    case OLC_MOB:
-      break;
-    case OLC_OBJ:
-      break;
-    default:
-      error = 1;
-      break;
+	if (exit == NULL)
+	{
+	    send_to_char(ch, "  %c) %sNO EXIT%s\r\n", directions[i],
+			 CCNRM(ch, C_NRM), CCCYN(ch, C_NRM));
+	}
+	else if (exit->to_room == NOWHERE)
+	{
+	    send_to_char(ch, "  %c) %sNOWHERE%s\r\n", directions[i],
+			 CCNRM(ch, C_NRM), CCCYN(ch, C_NRM));
+	}
+	else
+	{
+	    send_to_char(ch, "  %c) %s%d - %s%s\r\n", directions[i],
+			 CCNRM(ch, C_NRM), world[exit->to_room].number,
+			 world[exit->to_room].name, CCCYN(ch, C_NRM));
+	}
     }
 
-  }
+    struct extra_descr_data *extra = room->ex_description;
+    int option = 5;
+    while (extra)
+    {
+	send_to_char(ch, "%s %d) Extra: %s%s\r\n",
+		     CCCYN(ch, C_NRM), option++, CCNRM(ch, C_NRM), extra->keyword);
 
-  error = error; // Code seems incomplete. Eliminate unused warning for error.
+	extra = extra->next;
+    }
+
+    send_to_char(ch, "\r\nEnter Choice (or . when done): ");
+    ed->state =  OLC_STATE_REDIT_TOPCHOICE;
 }
 
-
-/* can_modify: determine if a particular char can modify a vnum */
-int can_modify(struct char_data *ch, int vnum)
+void olc_redit_handle_top(struct descriptor_data *d, struct olc_editor_s *ed, char *arg)
 {
-  return (1);
-}
+    struct char_data *ch = d->character;
+    int room_rnum = real_room(ed->room_vnum);
+    struct room_data *room = &world[room_rnum];
 
-
-/* generic fn for modifying a string */
-void olc_string(char **string, size_t maxlen, char *arg)
-{
-  skip_spaces(&arg);
-
-  if (!*arg) {
-    send_to_char(olc_ch, "Enter new string (max of %d characters); use '@' on a new line when done.\r\n", (int) maxlen);
-    **string = '\0';
-    string_write(olc_ch->desc, string, maxlen, 0, NULL);
-  } else {
-    if (strlen(arg) > maxlen) {
-      send_to_char(olc_ch, "String too long (cannot be more than %d chars).\r\n", (int) maxlen);
-    } else {
-      if (*string != NULL)
-	free(*string);
-      *string = strdup(arg);
-      send_to_char(olc_ch, "%s", OK);
-    }
-  }
-}
-
-
-/* generic fn for modifying a bitvector */
-void olc_bitvector(int *bv, const char **names, char *arg)
-{
-  int newbv, flagnum, doremove = 0;
-  char *this_name;
-  char buf[MAX_STRING_LENGTH];
-
-  skip_spaces(&arg);
-
-  if (!*arg) {
-    send_to_char(olc_ch, "Flag list or flag modifiers required.\r\n");
-    return;
-  }
-  /* determine if this is 'absolute' or 'relative' mode */
-  if (*arg == '+' || *arg == '-')
-    newbv = *bv;
-  else
-    newbv = 0;
-
-  while (*arg) {
-    arg = one_argument(arg, buf);	/* get next argument */
-
-    /* change to upper-case */
-    for (this_name = buf; *this_name; this_name++)
-      CAP(this_name);
-
-    /* determine if this is an add or a subtract */
-    if (*buf == '+' || *buf == '-') {
-      this_name = buf + 1;
-      if (*buf == '-')
-	doremove = TRUE;
-      else
-	doremove = FALSE;
-    } else {
-      this_name = buf;
-      doremove = FALSE;
+    if (!*arg)
+    {
+	send_to_char(ch, "Not a valid choice, try again: ");
+	return;
     }
 
-    /* figure out which one we're dealing with */
-    if ((flagnum = search_block(this_name, names, TRUE)) < 0)
-      send_to_char(olc_ch, "Unknown flag: %s\r\n", this_name);
-    else {
-      if (doremove)
-	REMOVE_BIT(newbv, (1 << flagnum));
-      else
-	SET_BIT(newbv, (1 << flagnum));
+    switch (*arg)
+    {
+      case '1':
+	ed->state_after = OLC_STATE_REDIT_TOP;
+	olc_start_textedit(d, ed, "name", &room->name, 1);
+	break;
+      case '2':
+	ed->state_after = OLC_STATE_REDIT_TOP;
+	olc_start_textedit(d, ed, "description", &room->description, 0);
+	break;
+      case '3':
+	ed->state_after = OLC_STATE_REDIT_TOP;
+	olc_start_toggleedit(d, ed, "room flags", &room->room_flags, room_bits);
+	break;
+      case '4':
+	ed->state_after = OLC_STATE_REDIT_TOP;
+	olc_start_typeedit(d, ed, "sector type", &room->sector_type, sector_types);
+	break;
+      case '.':
+	olc_clear_editor(d->olc_editor_idx);
+	STATE(d) = CON_PLAYING;
+	break;
+      default:
+	send_to_char(ch, "%c isn't a valid choice.\r\n", *arg);
+	olc_redit_display_top(d, ed);
+	break;
     }
-  }
-
-  *bv = newbv;
-  sprintbit(newbv, names, buf, sizeof(buf));
-  send_to_char(olc_ch, "Flags now set to: %s\r\n", buf);
 }
 
-void olc_set_show(struct char_data *ch, int olc_mode, char *arg)
+void olc_nanny(struct descriptor_data *d, char *arg)
 {
+    if (d->olc_editor_idx <= 0 && d->olc_editor_idx >= MAX_EDITORS)
+    {
+	STATE(d) = CON_CLOSE;
+	return;
+    }
+
+    struct olc_editor_s *ed = &olc_editors[d->olc_editor_idx];
+
+    if (GET_IDNUM(d->character) != ed->idnum)
+    {
+	if (ed->idnum != 0)
+	{
+	    ed->idnum = 0;
+	    olc_clear_editor(d->olc_editor_idx);
+	}
+	STATE(d) = CON_CLOSE;
+	return;
+    }
+
+    switch (ed->state)
+    {
+      case OLC_STATE_REDIT_TOP:
+	olc_redit_display_top(d, ed);
+	break;
+
+      case OLC_STATE_REDIT_TOPCHOICE:
+	olc_redit_handle_top(d, ed, arg);
+	break;
+
+      case OLC_STATE_TEXTEDIT:
+	olc_handle_textedit(d, ed, arg);
+	break;
+
+      case OLC_STATE_TOGGLEEDIT:
+	olc_handle_toggleedit(d, ed, arg);
+	break;
+
+      case OLC_STATE_TYPEEDIT:
+	olc_handle_typeedit(d, ed, arg);
+	break;
+    }
+}
+
+ACMD(do_redit)
+{
+    skip_spaces(&argument);
+
+    if (!*argument)
+    {
+	send_to_char(ch, "You need to specify a room number.\r\n");
+	return;
+    }
+
+    int room_vnum = atoi(argument);
+    int room_rnum = real_room(room_vnum);
+    if (room_rnum == NOWHERE)
+    {
+	send_to_char(ch, "Room %d doesn't exist.\r\n", room_vnum);
+	return;
+    }
+
+    olc_create_editor(ch);
+
+    if (ch->desc->olc_editor_idx > 0)
+    {
+	olc_editors[ch->desc->olc_editor_idx].state = OLC_STATE_REDIT_TOP;
+	olc_editors[ch->desc->olc_editor_idx].room_vnum = room_vnum;
+	olc_nanny(ch->desc, "");
+	STATE(ch->desc) = CON_OLC_EDIT;
+    }
 }

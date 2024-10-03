@@ -22,7 +22,7 @@
 #include "handler.h"
 #include "mail.h"
 #include "screen.h"
-
+#include "olc.h"
 
 /* external variables */
 extern room_rnum r_mortal_start_room;
@@ -52,6 +52,7 @@ int Valid_Name(char *newname);
 void read_aliases(struct char_data *ch);
 void delete_aliases(const char *charname);
 void roll_abils(struct char_data *ch, struct char_ability_data *abils);
+void olc_nanny(struct descriptor_data *d, char *arg);
 
 /* local functions */
 int perform_dupe_check(struct descriptor_data *d);
@@ -124,7 +125,6 @@ ACMD(do_look);
 ACMD(do_memories);
 /* ACMD(do_move); -- interpreter.h */
 ACMD(do_not_here);
-ACMD(do_olc);
 ACMD(do_order);
 ACMD(do_page);
 ACMD(do_poofset);
@@ -381,7 +381,6 @@ cpp_extern const struct command_info cmd_info[] = {
   { "nudge"    , POS_RESTING , do_action   , 0, 0 },
   { "nuzzle"   , POS_RESTING , do_action   , 0, 0 },
 
-  { "olc"      , POS_DEAD    , do_olc      , LVL_IMPL, 0 },
   { "order"    , POS_RESTING , do_order    , 1, 0 },
   { "offer"    , POS_STANDING, do_not_here , 1, 0 },
   { "open"     , POS_SITTING , do_gen_door , 0, SCMD_OPEN },
@@ -418,6 +417,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "reply"    , POS_SLEEPING, do_reply    , 0, 0 },
   { "rest"     , POS_RESTING , do_rest     , 0, 0 },
   { "read"     , POS_RESTING , do_look     , 0, SCMD_READ },
+  { "redit"    , POS_DEAD    , do_redit    , LVL_IMPL, 0 },
   { "reload"   , POS_DEAD    , do_reboot   , LVL_IMPL, 0 },
   { "recite"   , POS_RESTING , do_use      , 0, SCMD_RECITE },
   { "receive"  , POS_STANDING, do_not_here , 1, 0 },
@@ -1816,6 +1816,10 @@ void nanny(struct descriptor_data *d, char *arg)
       d->has_prompt = 0;
     }
 
+    break;
+
+  case CON_OLC_EDIT:
+    olc_nanny(d, arg);
     break;
 
   default:
