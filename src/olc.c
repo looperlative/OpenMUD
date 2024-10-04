@@ -223,6 +223,74 @@ void olc_handle_textedit(struct descriptor_data *d, struct olc_editor_s *ed, cha
 
 static char directions[6] = "NESWUD";
 
+void olc_direction_display_top(struct descriptor_data *d, struct olc_editor_s *ed, int direction)
+{
+    struct char_data *ch = d->character;
+    int room_rnum = real_room(ed->room_vnum);
+    struct room_data *room = &world[room_rnum];
+
+    ed->direction = direction;
+    struct room_direction_data *exit = room->dir_option[ed->direction];
+
+    send_to_char(ch, "%sExit %c%s\r\n",
+		 CCCYN(ch, C_NRM), directions[ed->direction], CCNRM(ch, C_NRM));
+    send_to_char(ch, "%s 1) Description:%s\r\n%s\r\n", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM),
+		 exit->general_description);
+    send_to_char(ch, "%s 2) Keywords: %s%s\r\n", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), exit->keyword);
+    send_to_char(ch, "%s 3) Key Number: %s%d\r\n",
+		 CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), exit->key);
+    send_to_char(ch, "%s 4) To Room: %s%d - %s\r\n", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM),
+		 world[exit->to_room].number, world[exit->to_room].name);
+
+    send_to_char(ch, "\r\nEnter Choice (or . when done): ");
+    ed->state =  OLC_STATE_DIRECTION_TOPCHOICE;
+}
+
+void olc_direction_handle_top(struct descriptor_data *d, struct olc_editor_s *ed, char *arg)
+{
+    struct char_data *ch = d->character;
+    int room_rnum = real_room(ed->room_vnum);
+    struct room_data *room = &world[room_rnum];
+    struct room_direction_data *exit = room->dir_option[ed->direction];
+
+    if (!*arg)
+    {
+	send_to_char(ch, "Not a valid choice, try again: ");
+	return;
+    }
+
+    switch (*arg)
+    {
+      case '1':
+	ed->state_after = OLC_STATE_DIRECTION_TOP;
+	olc_start_textedit(d, ed, "description", &exit->general_description, 0);
+	break;
+      case '2':
+	ed->state_after = OLC_STATE_DIRECTION_TOP;
+	olc_start_textedit(d, ed, "keywords", &exit->keyword, 1);
+	break;
+      case '3':
+	exit->key = atoi(arg);
+	olc_direction_display_top(d, ed, ed->direction);
+	break;
+      case '4':
+	int to_vnum = atoi(arg);
+	int to_rnum = real_room(to_vnum);
+	if (to_rnum != NOWHERE)
+	    exit->to_room = to_rnum;
+	olc_direction_display_top(d, ed, ed->direction);
+	break;
+      case '.':
+	olc_clear_editor(d->olc_editor_idx);
+	STATE(d) = CON_PLAYING;
+	break;
+      default:
+	send_to_char(ch, "%c isn't a valid choice.\r\n", *arg);
+	olc_direction_display_top(d, ed, ed->direction);
+	break;
+    }
+}
+
 void olc_redit_display_top(struct descriptor_data *d, struct olc_editor_s *ed)
 {
     char buf[MAX_STRING_LENGTH];
@@ -307,6 +375,30 @@ void olc_redit_handle_top(struct descriptor_data *d, struct olc_editor_s *ed, ch
 	ed->state_after = OLC_STATE_REDIT_TOP;
 	olc_start_typeedit(d, ed, "sector type", &room->sector_type, sector_types);
 	break;
+      case 'N':
+      case 'n':
+	olc_direction_display_top(d, ed, 0);
+	break;
+      case 'E':
+      case 'e':
+	olc_direction_display_top(d, ed, 1);
+	break;
+      case 'S':
+      case 's':
+	olc_direction_display_top(d, ed, 2);
+	break;
+      case 'W':
+      case 'w':
+	olc_direction_display_top(d, ed, 3);
+	break;
+      case 'U':
+      case 'u':
+	olc_direction_display_top(d, ed, 4);
+	break;
+      case 'D':
+      case 'd':
+	olc_direction_display_top(d, ed, 5);
+	break;
       case '.':
 	olc_clear_editor(d->olc_editor_idx);
 	STATE(d) = CON_PLAYING;
@@ -347,6 +439,14 @@ void olc_nanny(struct descriptor_data *d, char *arg)
 
       case OLC_STATE_REDIT_TOPCHOICE:
 	olc_redit_handle_top(d, ed, arg);
+	break;
+
+      case OLC_STATE_DIRECTION_TOP:
+	olc_direction_display_top(d, ed, ed->direction);
+	break;
+
+      case OLC_STATE_DIRECTION_TOPCHOICE:
+	olc_direction_handle_top(d, ed, arg);
 	break;
 
       case OLC_STATE_TEXTEDIT:

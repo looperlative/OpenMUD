@@ -739,6 +739,20 @@ void game_loop(socket_t mother_desc)
       }
       d->has_prompt = FALSE;
 
+      if (!d->ignore_proxy && strncmp(comm, "PROXY TCP4", 10) == 0)
+      {
+	  int ipfrom[4], portfrom;
+
+	  if (strcmp(d->host, "localhost") == 0 &&
+	      sscanf(comm, "PROXY TCP4 %d.%d.%d.%d %*d.%*d.%*d.%*d %d %*d",
+		     &ipfrom[0], &ipfrom[1], &ipfrom[2], &ipfrom[3], &portfrom) == 5)
+	  {
+	      sprintf(d->host, "%d.%d.%d.%d", ipfrom[0], ipfrom[1], ipfrom[2], ipfrom[3]);
+	      continue;
+	  }
+      }
+      d->ignore_proxy = 1;
+
       if (d->str)		/* Writing boards, mail, etc. */
 	string_add(d, comm);
       else if (d->showstr_count) /* Reading something w/ pager */

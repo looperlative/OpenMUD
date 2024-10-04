@@ -36,19 +36,27 @@
 #define OLC_STATE_TEXTEDIT		3
 #define OLC_STATE_TOGGLEEDIT		4
 #define OLC_STATE_TYPEEDIT		5
+#define OLC_STATE_DIRECTION_TOP		6
+#define OLC_STATE_DIRECTION_TOPCHOICE	7
 
 struct olc_editor_s
 {
     int idnum;				/* This persons player number */
     int state;				/* olc_nanny() state */
-    int room_vnum;			/* Room that we are editting. 0 is none. */
 
+    /* Specific fields for specific top levels */
+    int room_vnum;			/* Room that we are editting. 0 is none. */
+    int direction;			/* Direction that we are editting. 0 is none. */
+
+    /* Fields for generic editors. */
     int state_after;			/* olc_nanny() state after done editting */
 
+    /* Fields for text editor */
     char *field_name;			/* DO NOT FREE - name of field being editted */
     char **text_edit_string;		/* String the editor is editting */
     int single_line;			/* if not 0, then editting single line. */
 
+    /* Fields for bit and type editors */
     int *flags_field;			/* Flags that we are editting */
     const char **bit_names;		/* Flag names */
     int n_bits;				/* Number of used bits */

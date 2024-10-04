@@ -1018,6 +1018,7 @@ struct descriptor_data {
    struct descriptor_data *snoop_by; /* And who is snooping this char	*/
    struct descriptor_data *next; /* link to next descriptor		*/
 
+   int  ignore_proxy;
    int  olc_editor_idx;
 };
 
