@@ -739,6 +739,15 @@ void game_loop(socket_t mother_desc)
       }
       d->has_prompt = FALSE;
 
+      /*
+       * If connection made via stunnel4 or other proxy that supports
+       * HAPROXY, then the first line sent to the mud after the
+       * connection will be the proxy information.  The ignore_proxy
+       * field is used to only do these checks for the first line
+       * received.  We will only accept the PROXY line if it is the
+       * first line and if the original connection was from the
+       * localhost.
+       */
       if (!d->ignore_proxy && strncmp(comm, "PROXY TCP4", 10) == 0)
       {
 	  int ipfrom[4], portfrom;
