@@ -34,11 +34,32 @@
 #include "comm.h"
 #include "screen.h"
 #include "constants.h"
+#include "spells.h"
 #include "olc.h"
 
-struct olc_editor_s olc_editors[MAX_EDITORS];
-struct olc_garbage_s *mob_garbage = NULL;
-struct olc_garbage_s *obj_garbage = NULL;
+static struct olc_editor_s olc_editors[MAX_EDITORS];
+static struct olc_garbage_s *olc_mob_garbage = NULL;
+static struct olc_garbage_s *olc_obj_garbage = NULL;
+
+const char *attack_types[] =
+{
+    "hits",              /* 0 */
+    "stings",
+    "whips",
+    "slashes",
+    "bites",
+    "bludgeons",    /* 5 */
+    "crushes",
+    "pounds",
+    "claws",
+    "mauls",
+    "thrashes",       /* 10 */
+    "pierces",
+    "blasts",
+    "punches",
+    "stabs",
+    "\n"
+};
 
 static void olc_state_after_push(struct olc_editor_s *ed, int state)
 {
@@ -172,6 +193,7 @@ void olc_handle_typeedit(struct descriptor_data *d, struct olc_editor_s *ed, cha
     if (*arg == '.')
     {
 	ed->flags_field = NULL;
+	ed->flags_field8 = NULL;
 	ed->bit_names = NULL;
 	ed->n_bits = 0;
 	ed->field_name = NULL;
@@ -183,10 +205,27 @@ void olc_handle_typeedit(struct descriptor_data *d, struct olc_editor_s *ed, cha
     {
 	int n = atoi(arg);
 	if (n >= 1 && n <= ed->n_bits && ed->bit_names[n-1][0] != '*')
-	    *ed->flags_field = n - 1;
+	{
+	    if (ed->flags_field != NULL)
+		*ed->flags_field = n - 1;
+	    else if (ed->flags_field8 != NULL)
+		*ed->flags_field8 = n - 1;
+
+	    ed->flags_field = NULL;
+	    ed->flags_field8 = NULL;
+	    ed->bit_names = NULL;
+	    ed->n_bits = 0;
+	    ed->field_name = NULL;
+	    ed->state = olc_state_after_pop(ed);
+	    olc_nanny(d, "");
+	    return;
+	}
     }
 
-    sprinttype(*ed->flags_field, ed->bit_names, buf, sizeof(buf));
+    if (ed->flags_field != NULL)
+	sprinttype(*ed->flags_field, ed->bit_names, buf, sizeof(buf));
+    else
+	sprinttype(*ed->flags_field8, ed->bit_names, buf, sizeof(buf));
     send_to_char(ch, "Current %s: %s", ed->field_name, buf);
 
     int i = 0;
@@ -210,6 +249,20 @@ void olc_start_typeedit(struct descriptor_data *d, struct olc_editor_s *ed,
     ed->field_name = field_name;
     ed->bit_names = type_names;
     ed->flags_field = type_field;
+    ed->flags_field8 = NULL;
+    ed->state = OLC_STATE_TYPEEDIT;
+    ed->n_bits = 0;
+
+    olc_handle_typeedit(d, ed, "");
+}
+
+void olc_start_typeedit8(struct descriptor_data *d, struct olc_editor_s *ed,
+			 char *field_name, byte *type_field, const char *type_names[])
+{
+    ed->field_name = field_name;
+    ed->bit_names = type_names;
+    ed->flags_field8 = type_field;
+    ed->flags_field = NULL;
     ed->state = OLC_STATE_TYPEEDIT;
     ed->n_bits = 0;
 
@@ -223,7 +276,7 @@ void olc_start_textedit(struct descriptor_data *d, struct olc_editor_s *ed,
 
     ed->field_name = field_name;
     ed->text_edit_string = string;
-    if (*ed->text_edit_string != NULL)
+    if (!want_dice && *ed->text_edit_string != NULL)
     {
 	olc_free(ed, *ed->text_edit_string);
 	*ed->text_edit_string = strdup("");
@@ -231,11 +284,27 @@ void olc_start_textedit(struct descriptor_data *d, struct olc_editor_s *ed,
 
     ed->single_line = is_single_line;
     ed->want_dice = want_dice;
+    ed->want_spellname = 0;
     ed->state = OLC_STATE_TEXTEDIT;
 
     send_to_char(ch, "Enter new value for '%s'%s",
 		 field_name,
 		 is_single_line ? ":\r\n" : "\r\n(enter . at start of line to end editting):\r\n");
+}
+
+void olc_start_getspellname(struct descriptor_data *d, struct olc_editor_s *ed, int *field)
+{
+    struct char_data *ch = d->character;
+
+    ed->flags_field = field;
+    ed->field_name = NULL;
+    ed->text_edit_string = NULL;
+    ed->single_line = 1;
+    ed->want_dice = 0;
+    ed->want_spellname = 1;
+    ed->state = OLC_STATE_TEXTEDIT;
+
+    send_to_char(ch, "Enter the name of a spell: ");
 }
 
 void olc_handle_textedit(struct descriptor_data *d, struct olc_editor_s *ed, char *arg)
@@ -257,15 +326,24 @@ void olc_handle_textedit(struct descriptor_data *d, struct olc_editor_s *ed, cha
 		    *ed->diceextra8 = i3;
 	    }
 	}
-
-	if (*ed->text_edit_string != NULL)
-	    olc_free(ed, *ed->text_edit_string);
-	*ed->text_edit_string = strdup(arg);
+	else if (ed->want_spellname)
+	{
+	    int i = find_skill_num(arg);
+	    if (i >= 1 && i <= TOP_SPELL_DEFINE)
+		*ed->flags_field = i;
+	}
+	else
+	{
+	    if (*ed->text_edit_string != NULL)
+		olc_free(ed, *ed->text_edit_string);
+	    *ed->text_edit_string = strdup(arg);
+	}
 
     	ed->field_name = NULL;
 	ed->text_edit_string = NULL;
 	ed->single_line = 0;
 	ed->want_dice = 0;
+	ed->want_spellname = 0;
 	ed->state = olc_state_after_pop(ed);
 	olc_nanny(d, "");
     }
@@ -283,8 +361,8 @@ void olc_handle_textedit(struct descriptor_data *d, struct olc_editor_s *ed, cha
 	char *s1 = *ed->text_edit_string;
 	CREATE(*ed->text_edit_string, char, strlen(s1) + strlen(arg) + 3);
 	strcpy(*ed->text_edit_string, s1);
-	strcat(*ed->text_edit_string, "\r\n");
 	strcat(*ed->text_edit_string, arg);
+	strcat(*ed->text_edit_string, "\r\n");
     }
 }
 
@@ -425,26 +503,6 @@ void olc_direction_handle_top(struct descriptor_data *d, struct olc_editor_s *ed
     }
 }
 
-const char *attack_types[] =
-{
-    "hits",              /* 0 */
-    "stings",
-    "whips",
-    "slashes",
-    "bites",
-    "bludgeons",    /* 5 */
-    "crushes",
-    "pounds",
-    "claws",
-    "mauls",
-    "thrashes",       /* 10 */
-    "pierces",
-    "blasts",
-    "punches",
-    "stabs",
-    "\n"
-};
-
 void olc_medit_display_top(struct descriptor_data *d, struct olc_editor_s *ed)
 {
     char buf[MAX_STRING_LENGTH];
@@ -531,6 +589,7 @@ void olc_medit_handle_top(struct descriptor_data *d, struct olc_editor_s *ed, ch
     if (*arg == '.') {
 	olc_clear_editor(d->olc_editor_idx);
 	STATE(d) = CON_PLAYING;
+	REMOVE_BIT(PLR_FLAGS(ch), PLR_WRITING);
     }
     else if (iarg == 1) {
 	olc_state_after_push(ed, OLC_STATE_MEDIT_TOP);
@@ -578,7 +637,7 @@ void olc_medit_handle_top(struct descriptor_data *d, struct olc_editor_s *ed, ch
 	ed->diceextra32 = &mob->mob_specials.hpextra;
 	ed->diceextra8 = NULL;
 	olc_state_after_push(ed, OLC_STATE_MEDIT_TOP);
-	olc_start_textedit(d, ed, "hitpoint dice", &mob->player.short_descr, 1, 1);
+	olc_start_textedit(d, ed, "hitpoint dice", NULL, 1, 1);
     }
     else if (iarg == 12) {
 	ed->ndice = &mob->mob_specials.damnodice;
@@ -586,7 +645,7 @@ void olc_medit_handle_top(struct descriptor_data *d, struct olc_editor_s *ed, ch
 	ed->diceextra8 = &GET_DAMROLL(mob);
 	ed->diceextra32 = NULL;
 	olc_state_after_push(ed, OLC_STATE_MEDIT_TOP);
-	olc_start_textedit(d, ed, "hitpoint dice", &mob->player.short_descr, 1, 1);
+	olc_start_textedit(d, ed, "hitpoint dice", NULL, 1, 1);
     }
     else if (iarg == 13) {
 	olc_get_number(d, ed, "Gold (0-1000000): ", &GET_GOLD(mob),
@@ -644,6 +703,387 @@ void olc_medit_handle_top(struct descriptor_data *d, struct olc_editor_s *ed, ch
 	send_to_char(ch, "%s isn't a valid choice.\r\n", arg);
 	olc_medit_display_top(d, ed);
     }
+}
+
+void olc_oedit_display_top(struct descriptor_data *d, struct olc_editor_s *ed)
+{
+    char buf[MAX_STRING_LENGTH];
+
+    struct char_data *ch = d->character;
+    int rnum = real_object(ed->vnum);
+    struct obj_data *obj = &obj_proto[rnum];
+
+    send_to_char(ch, "%sObject %d%s\r\n", CCCYN(ch, C_NRM), ed->vnum, CCNRM(ch, C_NRM));
+    send_to_char(ch, "%s 1) Aliases: %s%s\r\n", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM),
+		 obj->name);
+    send_to_char(ch, "%s 2) Short Description:%s %s\r\n", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM),
+		 obj->short_description);
+    send_to_char(ch, "%s 3) Long Description:%s\r\n%s\r\n", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM),
+		 obj->description);
+    send_to_char(ch, "%s 4) Action Description:%s\r\n%s\r\n", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM),
+		 obj->action_description);
+    sprinttype(GET_OBJ_TYPE(obj), item_types, buf, sizeof(buf));
+    send_to_char(ch, "%s 5) Item Type: %s%s\r\n", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), buf);
+    sprintbit(GET_OBJ_EXTRA(obj), extra_bits, buf, sizeof(buf));
+    send_to_char(ch, "%s 6) Extra: %s%s\r\n", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), buf);
+    sprintbit(GET_OBJ_WEAR(obj), wear_bits, buf, sizeof(buf));
+    send_to_char(ch, "%s 7) Wear: %s%s\r\n", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), buf);
+    send_to_char(ch, "%s 8) Weight: %s%d\r\n", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM),
+		 GET_OBJ_WEIGHT(obj));
+    send_to_char(ch, "%s 9) Cost: %s%d\r\n", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM),
+		 GET_OBJ_COST(obj));
+    send_to_char(ch, "%s10) Rent: %s%d\r\n", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM),
+		 GET_OBJ_RENT(obj));
+
+    if (GET_OBJ_TYPE(obj) == ITEM_LIGHT) {
+	send_to_char(ch, "%s13) Capacity: %s%d\r\n",
+		     CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), GET_OBJ_VAL(obj, 2));
+    }
+    else if (GET_OBJ_TYPE(obj) == ITEM_SCROLL ||
+	     GET_OBJ_TYPE(obj) == ITEM_POTION) {
+	send_to_char(ch, "%s11) Caster Level: %s%d\r\n",
+		     CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), GET_OBJ_VAL(obj, 0));
+	send_to_char(ch, "%s12) Spell 1: %s%s\r\n",
+		     CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), skill_name(GET_OBJ_VAL(obj, 1)));
+	send_to_char(ch, "%s13) Spell 2: %s%s\r\n",
+		     CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), skill_name(GET_OBJ_VAL(obj, 2)));
+	send_to_char(ch, "%s14) Spell 3: %s%s\r\n",
+		     CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), skill_name(GET_OBJ_VAL(obj, 3)));
+    }
+    else if (GET_OBJ_TYPE(obj) == ITEM_WAND ||
+	     GET_OBJ_TYPE(obj) == ITEM_STAFF) {
+	send_to_char(ch, "%s11) Caster Level: %s%d\r\n",
+		     CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), GET_OBJ_VAL(obj, 0));
+	send_to_char(ch, "%s12) Charge Capacity: %s%d\r\n",
+		     CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), GET_OBJ_VAL(obj, 1));
+	send_to_char(ch, "%s13) Charges Remaining: %s%d\r\n",
+		     CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), GET_OBJ_VAL(obj, 2));
+	send_to_char(ch, "%s14) Spell: %s%s\r\n",
+		     CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), skill_name(GET_OBJ_VAL(obj, 3)));
+    }
+    else if (GET_OBJ_TYPE(obj) == ITEM_WEAPON) {
+	send_to_char(ch, "%s12) Number Of Damage Dice: %s%d\r\n",
+		     CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), GET_OBJ_VAL(obj, 1));
+	send_to_char(ch, "%s13) Size Of Damage Dice: %s%d\r\n",
+		     CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), GET_OBJ_VAL(obj, 2));
+	sprinttype(GET_OBJ_VAL(obj, 3), attack_types, buf, sizeof(buf));
+	send_to_char(ch, "%s14) Weapon Type: %s%s\r\n",
+		     CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), buf);
+    }
+    else if (GET_OBJ_TYPE(obj) == ITEM_ARMOR) {
+	send_to_char(ch, "%s11) AC Apply: %s%d\r\n",
+		     CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), GET_OBJ_VAL(obj, 0));
+    }
+    else if (GET_OBJ_TYPE(obj) == ITEM_CONTAINER) {
+	send_to_char(ch, "%s11) Capacity: %s%d\r\n",
+		     CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), GET_OBJ_VAL(obj, 0));
+	sprintbit(GET_OBJ_VAL(obj, 1), container_bits, buf, sizeof(buf));
+	send_to_char(ch, "%s12) Flag bits: %s%s\r\n",
+		     CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), buf);
+	send_to_char(ch, "%s13) Key Number: %s%d\r\n",
+		     CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), GET_OBJ_VAL(obj, 2));
+    }
+    else if (GET_OBJ_TYPE(obj) == ITEM_DRINKCON ||
+	     GET_OBJ_TYPE(obj) == ITEM_FOUNTAIN) {
+	send_to_char(ch, "%s11) Capacity: %s%d\r\n",
+		     CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), GET_OBJ_VAL(obj, 0));
+	send_to_char(ch, "%s12) Current Quantity: %s%d\r\n",
+		     CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), GET_OBJ_VAL(obj, 1));
+	sprinttype(GET_OBJ_VAL(obj, 2), drinks, buf, sizeof(buf));
+	send_to_char(ch, "%s13) Liquid Type: %s%s\r\n", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), buf);
+	send_to_char(ch, "%s14) Poisoned If Not Zero: %s%d\r\n",
+		     CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), GET_OBJ_VAL(obj, 3));
+    }
+    else if (GET_OBJ_TYPE(obj) == ITEM_FOOD) {
+	send_to_char(ch, "%s11) Number Of Hours: %s%d\r\n",
+		     CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), GET_OBJ_VAL(obj, 0));
+	send_to_char(ch, "%s14) Poisoned If Not Zero: %s%d\r\n",
+		     CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), GET_OBJ_VAL(obj, 3));
+    }
+    else if (GET_OBJ_TYPE(obj) == ITEM_MONEY) {
+	send_to_char(ch, "%s11) Number Of Coins: %s%d\r\n",
+		     CCCYN(ch, C_NRM), CCNRM(ch, C_NRM), GET_OBJ_VAL(obj, 0));
+    }
+
+    // Extra descs
+    struct extra_descr_data *extra = obj->ex_description;
+    int option = 20;
+    while (extra)
+    {
+	send_to_char(ch, "%s%d) Extra: %s%s\r\n",
+		     CCCYN(ch, C_NRM), option++, CCNRM(ch, C_NRM), extra->keyword);
+
+	extra = extra->next;
+    }
+    send_to_char(ch, "%s%d) Add new extra description%s\r\n",
+		 CCCYN(ch, C_NRM), option++, CCNRM(ch, C_NRM));
+
+    // Affects
+    int new_affect_idx = -1;
+    for (int i = 0; i < MAX_OBJ_AFFECT; i++)
+    {
+	if (obj->affected[i].location > 0)
+	{
+	    sprinttype(obj->affected[i].location, apply_types, buf, sizeof(buf));
+	    send_to_char(ch, "%s%d) Affected: %s%-15s   %s%d) Amount: %s%d\r\n",
+			 CCCYN(ch, C_NRM), i + 30, CCNRM(ch, C_NRM), buf,
+			 CCCYN(ch, C_NRM), i + 40, CCNRM(ch, C_NRM), obj->affected[i].modifier);
+	}
+	else if (new_affect_idx < 0)
+	    new_affect_idx = i;
+    }
+    send_to_char(ch, "%s%d) Affected: %s%-15s   %s%d) Amount: %s%d\r\n",
+		 CCCYN(ch, C_NRM), new_affect_idx + 30, CCNRM(ch, C_NRM), "NEW",
+		 CCCYN(ch, C_NRM), new_affect_idx + 40, CCNRM(ch, C_NRM),
+		 obj->affected[new_affect_idx].modifier);
+
+    send_to_char(ch, "\r\nEnter Choice (or . when done): ");
+    ed->state =  OLC_STATE_OEDIT_TOPCHOICE;
+}
+
+void olc_oedit_handle_top(struct descriptor_data *d, struct olc_editor_s *ed, char *arg)
+{
+    struct char_data *ch = d->character;
+    int rnum = real_object(ed->vnum);
+    struct obj_data *obj = &obj_proto[rnum];
+
+    if (!*arg)
+    {
+	send_to_char(ch, "Not a valid choice, try again: ");
+	return;
+    }
+
+    int iarg = atoi(arg);
+
+    if (*arg == '.') {
+	olc_clear_editor(d->olc_editor_idx);
+	STATE(d) = CON_PLAYING;
+	REMOVE_BIT(PLR_FLAGS(ch), PLR_WRITING);
+    }
+    else if (iarg == 1) {
+	olc_state_after_push(ed, OLC_STATE_OEDIT_TOP);
+	olc_start_textedit(d, ed, "name", &obj->name, 1, 0);
+    }
+    else if (iarg == 2) {
+	olc_state_after_push(ed, OLC_STATE_OEDIT_TOP);
+	olc_start_textedit(d, ed, "short desc", &obj->short_description, 1, 0);
+    }
+    else if (iarg == 3) {
+	olc_state_after_push(ed, OLC_STATE_OEDIT_TOP);
+	olc_start_textedit(d, ed, "long desc", &obj->description, 0, 0);
+    }
+    else if (iarg == 4) {
+	olc_state_after_push(ed, OLC_STATE_OEDIT_TOP);
+	olc_start_textedit(d, ed, "action desc", &obj->action_description, 0, 0);
+    }
+    else if (iarg == 5) {
+	olc_state_after_push(ed, OLC_STATE_OEDIT_TOP);
+	olc_start_typeedit(d, ed, "item type", &GET_OBJ_TYPE(obj), item_types);
+    }
+    else if (iarg == 6) {
+	olc_state_after_push(ed, OLC_STATE_OEDIT_TOP);
+	olc_start_toggleedit(d, ed, "extra", &GET_OBJ_EXTRA(obj), extra_bits);
+    }
+    else if (iarg == 7) {
+	olc_state_after_push(ed, OLC_STATE_OEDIT_TOP);
+	olc_start_toggleedit(d, ed, "wear", &GET_OBJ_WEAR(obj), wear_bits);
+    }
+    else if (iarg == 8) {
+	olc_get_number(d, ed, "Weight (1-255): ", &GET_OBJ_WEIGHT(obj),
+		       sizeof(GET_OBJ_WEIGHT(obj)), 0, 255, OLC_STATE_OEDIT_TOP);
+    }
+    else if (iarg == 9) {
+	olc_get_number(d, ed, "Cost (1-1000000): ", &GET_OBJ_COST(obj),
+		       sizeof(GET_OBJ_COST(obj)), 0, 1000000, OLC_STATE_OEDIT_TOP);
+    }
+    else if (iarg == 10) {
+	olc_get_number(d, ed, "Rent (1-1000000): ", &GET_OBJ_RENT(obj),
+		       sizeof(GET_OBJ_RENT(obj)), 0, 1000000, OLC_STATE_OEDIT_TOP);
+    }
+    else if (iarg >= 11 && iarg <= 14)
+    {
+	if (GET_OBJ_TYPE(obj) == ITEM_LIGHT) {
+	    if (iarg == 13) {
+		olc_get_number(d, ed, "Capacity (1-1000000): ", &GET_OBJ_VAL(obj, 2),
+			       sizeof(GET_OBJ_VAL(obj, 2)), 0, 1000000, OLC_STATE_OEDIT_TOP);
+	    }
+	    else
+		goto invalid_choice;
+	}
+	else if (GET_OBJ_TYPE(obj) == ITEM_SCROLL ||
+		 GET_OBJ_TYPE(obj) == ITEM_POTION) {
+	    if (iarg == 11) {
+		olc_get_number(d, ed, "Caster Level (1-30): ", &GET_OBJ_VAL(obj, 0),
+			       sizeof(GET_OBJ_VAL(obj, 0)), 0, 30, OLC_STATE_OEDIT_TOP);
+	    }
+	    else if (iarg == 12)
+		olc_start_getspellname(d, ed, &GET_OBJ_VAL(obj, 1));
+	    else if (iarg == 13)
+		olc_start_getspellname(d, ed, &GET_OBJ_VAL(obj, 2));
+	    else if (iarg == 14)
+		olc_start_getspellname(d, ed, &GET_OBJ_VAL(obj, 3));
+	    else
+		goto invalid_choice;
+	}
+	else if (GET_OBJ_TYPE(obj) == ITEM_WAND ||
+		 GET_OBJ_TYPE(obj) == ITEM_STAFF) {
+	    if (iarg == 11) {
+		olc_get_number(d, ed, "Caster Level (1-30): ", &GET_OBJ_VAL(obj, 0),
+			       sizeof(GET_OBJ_VAL(obj, 0)), 0, 30, OLC_STATE_OEDIT_TOP);
+	    }
+	    else if (iarg == 12) {
+		olc_get_number(d, ed, "Charge Capacity (1-1000000): ", &GET_OBJ_VAL(obj, 1),
+			       sizeof(GET_OBJ_VAL(obj, 1)), 0, 1000000, OLC_STATE_OEDIT_TOP);
+	    }
+	    else if (iarg == 13) {
+		olc_get_number(d, ed, "Charges Remaining (1-1000000): ", &GET_OBJ_VAL(obj, 2),
+			       sizeof(GET_OBJ_VAL(obj, 2)), 0, 1000000, OLC_STATE_OEDIT_TOP);
+	    }
+	    else if (iarg == 14)
+		olc_start_getspellname(d, ed, &GET_OBJ_VAL(obj, 3));
+	    else
+		goto invalid_choice;
+	}
+	else if (GET_OBJ_TYPE(obj) == ITEM_WEAPON) {
+	    if (iarg == 12) {
+		olc_get_number(d, ed, "Number Of Damage Dice (1-255): ", &GET_OBJ_VAL(obj, 1),
+			       sizeof(GET_OBJ_VAL(obj, 1)), 0, 255, OLC_STATE_OEDIT_TOP);
+	    }
+	    else if (iarg == 13) {
+		olc_get_number(d, ed, "Size Of Damage Dice (1-255): ", &GET_OBJ_VAL(obj, 2),
+			       sizeof(GET_OBJ_VAL(obj, 2)), 0, 255, OLC_STATE_OEDIT_TOP);
+	    }
+	    else if (iarg == 14) {
+		olc_state_after_push(ed, OLC_STATE_OEDIT_TOP);
+		olc_start_typeedit(d, ed, "weapon type", &GET_OBJ_VAL(obj, 3), attack_types);
+	    }
+	    else
+		goto invalid_choice;
+	}
+	else if (GET_OBJ_TYPE(obj) == ITEM_ARMOR) {
+	    if (iarg == 11) {
+		olc_get_number(d, ed, "AC Apply (-10-10): ", &GET_OBJ_VAL(obj, 0),
+			       sizeof(GET_OBJ_VAL(obj, 0)), -10, 10, OLC_STATE_OEDIT_TOP);
+	    }
+	    else
+		goto invalid_choice;
+	}
+	else if (GET_OBJ_TYPE(obj) == ITEM_CONTAINER) {
+	    if (iarg == 11) {
+		olc_get_number(d, ed, "Capacity (1-1000000): ", &GET_OBJ_VAL(obj, 0),
+			       sizeof(GET_OBJ_VAL(obj, 0)), 1, 1000000, OLC_STATE_OEDIT_TOP);
+	    }
+	    else if (iarg == 12) {
+		olc_state_after_push(ed, OLC_STATE_OEDIT_TOP);
+		olc_start_toggleedit(d, ed, "container flags", &GET_OBJ_VAL(obj, 1),
+				     container_bits);
+	    }
+	    else if (iarg == 13) {
+		olc_get_number(d, ed, "Key Number (0-100000): ", &GET_OBJ_VAL(obj, 2),
+			       sizeof(GET_OBJ_VAL(obj, 2)), 0, 100000, OLC_STATE_OEDIT_TOP);
+	    }
+	    else
+		goto invalid_choice;
+	}
+	else if (GET_OBJ_TYPE(obj) == ITEM_DRINKCON ||
+		 GET_OBJ_TYPE(obj) == ITEM_FOUNTAIN) {
+	    if (iarg == 11) {
+		olc_get_number(d, ed, "Capacity (1-1000000): ", &GET_OBJ_VAL(obj, 0),
+			       sizeof(GET_OBJ_VAL(obj, 0)), 1, 1000000, OLC_STATE_OEDIT_TOP);
+	    }
+	    else if (iarg == 12) {
+		olc_get_number(d, ed, "Current Quantity (1-1000000): ", &GET_OBJ_VAL(obj, 1),
+			       sizeof(GET_OBJ_VAL(obj, 1)), 1, 1000000, OLC_STATE_OEDIT_TOP);
+	    }
+	    else if (iarg == 13) {
+		olc_state_after_push(ed, OLC_STATE_OEDIT_TOP);
+		olc_start_typeedit(d, ed, "liquid type", &GET_OBJ_VAL(obj, 2), drinks);
+	    }
+	    else if (iarg == 14) {
+		olc_get_number(d, ed, "Poisoned (0-1): ", &GET_OBJ_VAL(obj, 3),
+			       sizeof(GET_OBJ_VAL(obj, 3)), 0, 1, OLC_STATE_OEDIT_TOP);
+	    }
+	    else
+		goto invalid_choice;
+	}
+	else if (GET_OBJ_TYPE(obj) == ITEM_FOOD) {
+	    if (iarg == 11) {
+		olc_get_number(d, ed, "Hours Of Sustenance (1-100): ", &GET_OBJ_VAL(obj, 0),
+			       sizeof(GET_OBJ_VAL(obj, 0)), 1, 100, OLC_STATE_OEDIT_TOP);
+	    }
+	    else if (iarg == 14) {
+		olc_get_number(d, ed, "Poisoned (0-1): ", &GET_OBJ_VAL(obj, 3),
+			       sizeof(GET_OBJ_VAL(obj, 3)), 0, 1, OLC_STATE_OEDIT_TOP);
+	    }
+	    else
+		goto invalid_choice;
+	}
+	else if (GET_OBJ_TYPE(obj) == ITEM_MONEY) {
+	    if (iarg == 11) {
+		olc_get_number(d, ed, "Number Of Coins (1-1000000): ", &GET_OBJ_VAL(obj, 0),
+			       sizeof(GET_OBJ_VAL(obj, 0)), 1, 1000000, OLC_STATE_OEDIT_TOP);
+	    }
+	    else
+		goto invalid_choice;
+	}
+	else
+	    goto invalid_choice;
+    }
+    else if (iarg >= 20 && iarg <30)
+    {
+	struct extra_descr_data *extra = obj->ex_description;
+	int i = 20;
+	while (extra != NULL)
+	{
+	    if (i == iarg)
+	    {
+		printf("Edit extra desc %d - %s\n", i, extra->keyword);
+		ed->extra_desc_list = &obj->ex_description;
+		ed->extra_desc = extra;
+		olc_state_after_push(ed, OLC_STATE_OEDIT_TOP);
+		ed->state = OLC_STATE_EXTRADESC_TOP;
+		olc_nanny(d, "");
+		return;
+	    }
+	    extra = extra->next;
+	    i++;
+	}
+
+	if (i == iarg)
+	{
+	    printf("Edit new extra desc %d\n", i);
+	    ed->extra_desc_list = &obj->ex_description;
+	    ed->extra_desc = NULL;
+	    olc_state_after_push(ed, OLC_STATE_OEDIT_TOP);
+	    ed->state = OLC_STATE_EXTRADESC_TOP;
+	    olc_nanny(d, "");
+	    return;
+	}
+	goto invalid_choice;
+    }
+    else if (iarg >= 30 && iarg < 30 + MAX_OBJ_AFFECT)
+    {
+	int i = iarg - 30;
+	olc_state_after_push(ed, OLC_STATE_OEDIT_TOP);
+	olc_start_typeedit8(d, ed, "affected", &obj->affected[i].location, apply_types);
+    }
+    else if (iarg >= 40 && iarg < 40 + MAX_OBJ_AFFECT)
+    {
+	int i = iarg - 40;
+	olc_get_number(d, ed, "Affect Amount (-100-100): ",
+		       &obj->affected[i].modifier,
+		       sizeof(obj->affected[i].modifier),
+		       -100, 100, OLC_STATE_OEDIT_TOP);
+    }
+    else {
+	send_to_char(ch, "%s isn't a valid choice.\r\n", arg);
+	olc_oedit_display_top(d, ed);
+    }
+
+    return;
+invalid_choice:
+    send_to_char(ch, "%s isn't a valid choice.\r\n", arg);
+    olc_oedit_display_top(d, ed);
 }
 
 void olc_redit_display_top(struct descriptor_data *d, struct olc_editor_s *ed)
@@ -793,6 +1233,7 @@ void olc_redit_handle_top(struct descriptor_data *d, struct olc_editor_s *ed, ch
       case '.':
 	olc_clear_editor(d->olc_editor_idx);
 	STATE(d) = CON_PLAYING;
+	REMOVE_BIT(PLR_FLAGS(ch), PLR_WRITING);
 	break;
       default:
 	send_to_char(ch, "%c isn't a valid choice.\r\n", *arg);
@@ -806,6 +1247,7 @@ void olc_nanny(struct descriptor_data *d, char *arg)
     if (d->olc_editor_idx <= 0 && d->olc_editor_idx >= MAX_EDITORS)
     {
 	STATE(d) = CON_CLOSE;
+	REMOVE_BIT(PLR_FLAGS(d->character), PLR_WRITING);
 	return;
     }
 
@@ -819,6 +1261,7 @@ void olc_nanny(struct descriptor_data *d, char *arg)
 	    olc_clear_editor(d->olc_editor_idx);
 	}
 	STATE(d) = CON_CLOSE;
+	REMOVE_BIT(PLR_FLAGS(d->character), PLR_WRITING);
 	return;
     }
 
@@ -830,6 +1273,14 @@ void olc_nanny(struct descriptor_data *d, char *arg)
 
       case OLC_STATE_MEDIT_TOPCHOICE:
 	olc_medit_handle_top(d, ed, arg);
+	break;
+
+      case OLC_STATE_OEDIT_TOP:
+	olc_oedit_display_top(d, ed);
+	break;
+
+      case OLC_STATE_OEDIT_TOPCHOICE:
+	olc_oedit_handle_top(d, ed, arg);
 	break;
 
       case OLC_STATE_REDIT_TOP:
@@ -941,6 +1392,7 @@ ACMD(do_redit)
 	olc_editors[ch->desc->olc_editor_idx].vnum = room_vnum;
 	olc_nanny(ch->desc, "");
 	STATE(ch->desc) = CON_OLC_EDIT;
+	SET_BIT(PLR_FLAGS(ch), PLR_WRITING);
     }
 }
 
@@ -950,7 +1402,7 @@ ACMD(do_medit)
 
     if (!*argument)
     {
-	send_to_char(ch, "You need to specify a room number.\r\n");
+	send_to_char(ch, "You need to specify a mobile number.\r\n");
 	return;
     }
 
@@ -966,10 +1418,42 @@ ACMD(do_medit)
 
     if (ch->desc->olc_editor_idx > 0)
     {
-	olc_editors[ch->desc->olc_editor_idx].garbage_list = &mob_garbage;
+	olc_editors[ch->desc->olc_editor_idx].garbage_list = &olc_mob_garbage;
 	olc_editors[ch->desc->olc_editor_idx].state = OLC_STATE_MEDIT_TOP;
 	olc_editors[ch->desc->olc_editor_idx].vnum = vnum;
 	olc_nanny(ch->desc, "");
 	STATE(ch->desc) = CON_OLC_EDIT;
+	SET_BIT(PLR_FLAGS(ch), PLR_WRITING);
+    }
+}
+
+ACMD(do_oedit)
+{
+    skip_spaces(&argument);
+
+    if (!*argument)
+    {
+	send_to_char(ch, "You need to specify a object number.\r\n");
+	return;
+    }
+
+    int vnum = atoi(argument);
+    int rnum = real_object(vnum);
+    if (rnum == NOBODY)
+    {
+	send_to_char(ch, "Object %d doesn't exist.\r\n", vnum);
+	return;
+    }
+
+    olc_create_editor(ch);
+
+    if (ch->desc->olc_editor_idx > 0)
+    {
+	olc_editors[ch->desc->olc_editor_idx].garbage_list = &olc_obj_garbage;
+	olc_editors[ch->desc->olc_editor_idx].state = OLC_STATE_OEDIT_TOP;
+	olc_editors[ch->desc->olc_editor_idx].vnum = vnum;
+	olc_nanny(ch->desc, "");
+	STATE(ch->desc) = CON_OLC_EDIT;
+	SET_BIT(PLR_FLAGS(ch), PLR_WRITING);
     }
 }

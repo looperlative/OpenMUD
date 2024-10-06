@@ -45,6 +45,8 @@
 #define OLC_STATE_MEDIT_TOP		12
 #define OLC_STATE_MEDIT_TOPCHOICE	13
 #define OLC_STATE_NUMBER		14
+#define OLC_STATE_OEDIT_TOP		15
+#define OLC_STATE_OEDIT_TOPCHOICE	16
 
 struct olc_garbage_s
 {
@@ -71,11 +73,13 @@ struct olc_editor_s
     char **text_edit_string;		/* String the editor is editing */
     int single_line;			/* if not 0, then editing single line. */
     int want_dice;			/* Want something of the form: 1d2+3 */
+    int want_spellname;			/* Want the name of a spell */
 
     /* Fields for bit and type editors */
     int *flags_field;			/* Flags that we are editing */
     const char **bit_names;		/* Flag names */
     int n_bits;				/* Number of used bits */
+    byte *flags_field8;
 
     /* Extra description editor */
     struct extra_descr_data **extra_desc_list; /* List that the extra desc comes from. */
@@ -95,6 +99,7 @@ struct olc_editor_s
 };
 
 ACMD(do_medit);
+ACMD(do_oedit);
 ACMD(do_redit);
 void olc_nanny(struct descriptor_data *d, char *arg);
 

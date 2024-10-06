@@ -583,7 +583,7 @@ struct extra_descr_data {
 /* object flags; used in obj_data */
 struct obj_flag_data {
    int	value[4];	/* Values of the item (see list)    */
-   byte type_flag;	/* Type of item			    */
+   int  type_flag;	/* Type of item			    */
    int /*bitvector_t*/	wear_flags;	/* Where you can wear it	    */
    int /*bitvector_t*/	extra_flags;	/* If it hums, glows, etc.	    */
    int	weight;		/* Weigt what else                  */
@@ -868,8 +868,6 @@ struct player_special_data {
    char	*poofout;		/* Description upon a god's exit.       */
    struct alias_data *aliases;	/* Character's aliases			*/
    long last_tell;		/* idnum of last tell from		*/
-   void *last_olc_targ;		/* olc control				*/
-   int last_olc_mode;		/* olc control				*/
 };
 
 
