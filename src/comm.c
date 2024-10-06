@@ -748,17 +748,15 @@ void game_loop(socket_t mother_desc)
        * first line and if the original connection was from the
        * localhost.
        */
-      if (!d->ignore_proxy && strncmp(comm, "PROXY TCP4", 10) == 0)
-      {
-	  int ipfrom[4], portfrom;
+      if (!d->ignore_proxy) {
+	int ipfrom[4], portfrom;
 
-	  if (strcmp(d->host, "localhost") == 0 &&
-	      sscanf(comm, "PROXY TCP4 %d.%d.%d.%d %*d.%*d.%*d.%*d %d %*d",
-		     &ipfrom[0], &ipfrom[1], &ipfrom[2], &ipfrom[3], &portfrom) == 5)
-	  {
-	      sprintf(d->host, "%d.%d.%d.%d", ipfrom[0], ipfrom[1], ipfrom[2], ipfrom[3]);
-	      continue;
-	  }
+	if (strcmp(d->host, "localhost") == 0 &&
+	    sscanf(comm, "PROXY TCP4 %d.%d.%d.%d %*d.%*d.%*d.%*d %d %*d",
+		   &ipfrom[0], &ipfrom[1], &ipfrom[2], &ipfrom[3], &portfrom) == 5) {
+	  sprintf(d->host, "%d.%d.%d.%d", ipfrom[0], ipfrom[1], ipfrom[2], ipfrom[3]);
+	  continue;
+	}
       }
       d->ignore_proxy = 1;
 

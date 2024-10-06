@@ -361,6 +361,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "motd"     , POS_DEAD    , do_gen_ps   , 0, SCMD_MOTD },
   { "mail"     , POS_STANDING, do_not_here , 1, 0 },
   { "massage"  , POS_RESTING , do_action   , 0, 0 },
+  { "medit"    , POS_DEAD    , do_medit    , LVL_IMPL, 0 },
   { "memories" , POS_RESTING , do_memories , 0, 0 },
   { "mute"     , POS_DEAD    , do_wizutil  , LVL_GOD, SCMD_SQUELCH },
   { "murder"   , POS_FIGHTING, do_hit      , 0, SCMD_MURDER },

@@ -672,7 +672,7 @@ struct room_direction_data {
 
    char	*keyword;		/* for open/close			*/
 
-   sh_int /*bitvector_t*/ exit_info;	/* Exit info			*/
+   int /*bitvector_t*/ exit_info;	/* Exit info			*/
    obj_vnum key;		/* Key's number (-1 for no key)		*/
    room_rnum to_room;		/* Where direction leads (NOWHERE)	*/
 };
@@ -734,7 +734,7 @@ struct char_player_data {
    char	*long_descr;   /* for 'look'			       */
    char	*description;  /* Extra descriptions                   */
    char	*title;        /* PC / NPC's title                     */
-   byte sex;           /* PC / NPC's sex                       */
+   int  sex;           /* PC / NPC's sex                       */
    byte chclass;       /* PC / NPC's class		       */
    byte level;         /* PC / NPC's level                     */
    sh_int hometown;    /* PC s Hometown (zone)                 */
@@ -799,7 +799,7 @@ struct char_special_data {
    struct char_data *fighting;	/* Opponent				*/
    struct char_data *hunting;	/* Char hunted by this char		*/
 
-   byte position;		/* Standing, fighting, sleeping, etc.	*/
+   int  position;		/* Standing, fighting, sleeping, etc.	*/
 
    int	carry_weight;		/* Carried weight			*/
    byte carry_items;		/* Number of items carried		*/
@@ -876,10 +876,14 @@ struct player_special_data {
 /* Specials used by NPCs, not PCs */
 struct mob_special_data {
    memory_rec *memory;	    /* List of attackers to remember	       */
-   byte	attack_type;        /* The Attack Type Bitvector for NPC's     */
-   byte default_pos;        /* Default position for NPC                */
-   byte damnodice;          /* The number of damage dice's	       */
-   byte damsizedice;        /* The size of the damage dice's           */
+   int	attack_type;        /* The Attack Type Bitvector for NPC's     */
+   int default_pos;        /* Default position for NPC                */
+   int damnodice;          /* The number of damage dice's	       */
+   int damsizedice;        /* The size of the damage dice's           */
+
+    int hpnodice;		/* Number of HP dice			*/
+    int hpsizedice;		/* Size of HP dice			*/
+    int hpextra;		/* Extra added				*/
 };
 
 

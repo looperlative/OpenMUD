@@ -1150,9 +1150,9 @@ void parse_simple_mob(FILE *mob_f, int i, int nr)
 
   /* max hit = 0 is a flag that H, M, V is xdy+z */
   GET_MAX_HIT(mob_proto + i) = 0;
-  GET_HIT(mob_proto + i) = t[3];
-  GET_MANA(mob_proto + i) = t[4];
-  GET_MOVE(mob_proto + i) = t[5];
+  mob_proto[i].mob_specials.hpnodice = t[3];
+  mob_proto[i].mob_specials.hpsizedice = t[4];
+  mob_proto[i].mob_specials.hpextra = t[5];
 
   GET_MAX_MANA(mob_proto + i) = 10;
   GET_MAX_MOVE(mob_proto + i) = 50;
@@ -1823,11 +1823,8 @@ struct char_data *read_mobile(mob_vnum nr, int type) /* and mob_rnum */
   mob->next = character_list;
   character_list = mob;
 
-  if (!mob->points.max_hit) {
-    mob->points.max_hit = dice(mob->points.hit, mob->points.mana) +
-      mob->points.move;
-  } else
-    mob->points.max_hit = rand_number(mob->points.hit, mob->points.mana);
+  mob->points.max_hit = dice(mob->mob_specials.hpnodice,
+			     mob->mob_specials.hpsizedice) + mob->mob_specials.hpextra;
 
   mob->points.hit = mob->points.max_hit;
   mob->points.mana = mob->points.max_mana;

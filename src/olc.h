@@ -38,30 +38,63 @@
 #define OLC_STATE_TYPEEDIT		5
 #define OLC_STATE_DIRECTION_TOP		6
 #define OLC_STATE_DIRECTION_TOPCHOICE	7
+#define OLC_STATE_DOOR_TO_ROOM		8
+#define OLC_STATE_DOOR_KEY_NUMBER	9
+#define OLC_STATE_EXTRADESC_TOP		10
+#define OLC_STATE_EXTRADESC_TOPCHOICE	11
+#define OLC_STATE_MEDIT_TOP		12
+#define OLC_STATE_MEDIT_TOPCHOICE	13
+#define OLC_STATE_NUMBER		14
+
+struct olc_garbage_s
+{
+    struct olc_garbage_s *next;
+    int vnum;
+    void *garbage;
+};
 
 struct olc_editor_s
 {
     int idnum;				/* This persons player number */
     int state;				/* olc_nanny() state */
+    struct olc_garbage_s **garbage_list;/* Where to put our garbage. */
 
     /* Specific fields for specific top levels */
-    int room_vnum;			/* Room that we are editting. 0 is none. */
-    int direction;			/* Direction that we are editting. 0 is none. */
+    int vnum;				/* vnum of what we are editing. 0 is none. */
+    int direction;			/* Direction that we are editing. 0 is none. */
 
     /* Fields for generic editors. */
-    int state_after;			/* olc_nanny() state after done editting */
+    int state_after[2];			/* olc_nanny() state after done editing */
 
     /* Fields for text editor */
-    char *field_name;			/* DO NOT FREE - name of field being editted */
-    char **text_edit_string;		/* String the editor is editting */
-    int single_line;			/* if not 0, then editting single line. */
+    char *field_name;			/* DO NOT FREE - name of field being edited */
+    char **text_edit_string;		/* String the editor is editing */
+    int single_line;			/* if not 0, then editing single line. */
+    int want_dice;			/* Want something of the form: 1d2+3 */
 
     /* Fields for bit and type editors */
-    int *flags_field;			/* Flags that we are editting */
+    int *flags_field;			/* Flags that we are editing */
     const char **bit_names;		/* Flag names */
     int n_bits;				/* Number of used bits */
+
+    /* Extra description editor */
+    struct extra_descr_data **extra_desc_list; /* List that the extra desc comes from. */
+    struct extra_descr_data *extra_desc; /* Extra desc being edited. */
+
+    /* Number entry */
+    void *number_field;
+    int number_field_size;
+    int number_min;
+    int number_max;
+
+    /* Dice */
+    int *ndice;
+    int *sizedice;
+    int *diceextra32;
+    sbyte *diceextra8;
 };
 
+ACMD(do_medit);
 ACMD(do_redit);
 void olc_nanny(struct descriptor_data *d, char *arg);
 
