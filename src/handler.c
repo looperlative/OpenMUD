@@ -797,6 +797,8 @@ void extract_obj(struct obj_data *obj)
   while (obj->contains)
     extract_obj(obj->contains);
 
+  if (obj->zone_cmd_no >= 0)
+      zone_table[obj->zone_num].cmd[obj->zone_cmd_no].created_blob_exists = 0;
   REMOVE_FROM_LIST(obj, object_list, next);
 
   if (GET_OBJ_RNUM(obj) != NOTHING)
@@ -934,6 +936,9 @@ void extract_char_final(struct char_data *ch)
   char_from_room(ch);
 
   if (IS_NPC(ch)) {
+    if (ch->zone_cmd_no >= 0)
+      zone_table[ch->zone_num].cmd[ch->zone_cmd_no].created_blob_exists = 0;
+
     if (GET_MOB_RNUM(ch) != NOTHING)	/* prototyped */
       mob_index[GET_MOB_RNUM(ch)].number--;
     clearMemory(ch);

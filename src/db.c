@@ -2003,7 +2003,25 @@ void clean_zone(zone_rnum zone)
   }
 }
 
-#define DB_ZONE_RESET_DEBUG
+/*
+ * Using a totally new way of controlling what gets reset on a zone
+ * reset. The limits were designed to make certain that the mobiles
+ * and objects respawn in the right place in the right quantity.
+ * However, this only works if the mobiles are killed in the right
+ * order.  If you have a guard that is used in multiple places in the
+ * zone, but the players don't kill the guards that are listed first
+ * in the zone file, then guards begin to collect in one place.
+ * Instead, I've changed the code to track what zone rule created the
+ * mobile or object.  Then when reset happens, we only load objects
+ * and mobiles that have been removed from the game.  This will happen
+ * if a mobile is killed, an object is junked, an object is taken and
+ * rented, etc.
+ * DB_ZONE_RESET_DEBUG enables debugging messages that
+ * helped me see that the code is doing what it was designed to do.
+ * It has the potential to slow down the mud.  So, only enable if
+ * needed.
+ */
+#undef DB_ZONE_RESET_DEBUG
 
 /* execute the reset command table of a given zone */
 void reset_zone(zone_rnum zone)
@@ -2020,17 +2038,6 @@ void reset_zone(zone_rnum zone)
     mudlog(CMP, LVL_GOD, TRUE, "Auto zone clean: %s", zone_table[zone].name);
     clean_zone(zone);
   }
-
-  for (cmd_no = 0; ZCMD.command != 'S'; cmd_no++)
-    ZCMD.created_blob_exists = 0;
-
-  for (struct char_data *k = character_list; k != NULL; k = k->next)
-    if (k->zone_num == zone && k->zone_cmd_no >= 0 && IS_NPC(k))
-      zone_table[zone].cmd[k->zone_cmd_no].created_blob_exists = 1;
-
-  for (struct obj_data *o = object_list; o != NULL; o = o->next)
-    if (o->zone_num == zone && o->zone_cmd_no >= 0)
-      zone_table[zone].cmd[o->zone_cmd_no].created_blob_exists = 1;
 
   for (cmd_no = 0; ZCMD.command != 'S'; cmd_no++) {
 
@@ -2063,6 +2070,7 @@ void reset_zone(zone_rnum zone)
 	  mob->zone_cmd_no = cmd_no;
 	  mob->zone_num = zone;
 	  char_to_room(mob, ZCMD.arg3);
+	  ZCMD.created_blob_exists = 1;
 	  last_cmd = 1;
 	}
       } else
@@ -2086,12 +2094,14 @@ void reset_zone(zone_rnum zone)
 	    obj->zone_cmd_no = cmd_no;
 	    obj->zone_num = zone;
 	    obj_to_room(obj, ZCMD.arg3);
+	    ZCMD.created_blob_exists = 1;
 	    last_cmd = 1;
 	  } else {
 	    obj = read_object(ZCMD.arg1, REAL);
 	    obj->zone_cmd_no = cmd_no;
 	    obj->zone_num = zone;
 	    IN_ROOM(obj) = NOWHERE;
+	    ZCMD.created_blob_exists = 1;
 	    last_cmd = 1;
 	  }
 	}
@@ -2120,6 +2130,7 @@ void reset_zone(zone_rnum zone)
 	    break;
 	  }
 	  obj_to_obj(obj, obj_to);
+	  ZCMD.created_blob_exists = 1;
 	  last_cmd = 1;
 	}
       } else
@@ -2147,6 +2158,7 @@ void reset_zone(zone_rnum zone)
 	  obj->zone_cmd_no = cmd_no;
 	  obj->zone_num = zone;
 	  obj_to_char(obj, mob);
+	  ZCMD.created_blob_exists = 1;
 	  last_cmd = 1;
 	}
       } else
@@ -2176,6 +2188,7 @@ void reset_zone(zone_rnum zone)
 	  obj->zone_cmd_no = cmd_no;
 	  obj->zone_num = zone;
 	  equip_char(mob, obj, ZCMD.arg3);
+	  ZCMD.created_blob_exists = 1;
 	  last_cmd = 1;
 	}
       } else
