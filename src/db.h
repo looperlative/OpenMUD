@@ -145,6 +145,7 @@ struct reset_com {
    int	arg2;		/* Arguments to the command             */
    int	arg3;		/*                                      */
    int line;		/* line number this command appears on  */
+   int created_blob_exists; /* Used prior to reseting zone to determine if mob/obj still exists */
 
    /*
 	*  Commands:              *

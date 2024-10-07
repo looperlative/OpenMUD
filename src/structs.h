@@ -623,6 +623,9 @@ struct obj_data {
 
    struct obj_data *next_content; /* For 'contains' lists             */
    struct obj_data *next;         /* For the object list              */
+
+   int zone_cmd_no;		  /* The zone cmd that loaded this object */
+   int zone_num;		  /* The zone that loaded this object */
 };
 /* ======================================================================= */
 
@@ -938,6 +941,9 @@ struct char_data {
    int total_fighting_rounds;		 /* Number of rounds fighting     */
 
    int memory_slot;			 /* Memory slot target		  */
+
+   int zone_cmd_no;			 /* If this is a mobile, then zone cmd that loaded it */
+   int zone_num;		  	 /* The zone that loaded this mobile */
 };
 /* ====================================================================== */
 
