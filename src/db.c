@@ -1964,7 +1964,7 @@ void log_zone_error(zone_rnum zone, int cmd_no, const char *message)
 }
 
 #define ZONE_ERROR(message) \
-	{ log_zone_error(zone, cmd_no, message); last_cmd = 0; }
+	{ log_zone_error(zone, cmd_no, message); }
 
 /* clean zone */
 void clean_zone(zone_rnum zone)
@@ -2016,17 +2016,17 @@ void clean_zone(zone_rnum zone)
  * and mobiles that have been removed from the game.  This will happen
  * if a mobile is killed, an object is junked, an object is taken and
  * rented, etc.
- * DB_ZONE_RESET_DEBUG enables debugging messages that
- * helped me see that the code is doing what it was designed to do.
- * It has the potential to slow down the mud.  So, only enable if
- * needed.
+ *
+ * No need for limit numbers, or if clauses.  Still need to leave
+ * R commands because we need to relock and close containers.  We
+ * can handle this automatically as well.  Will leave this for another
+ * day.
  */
-#undef DB_ZONE_RESET_DEBUG
 
 /* execute the reset command table of a given zone */
 void reset_zone(zone_rnum zone)
 {
-  int cmd_no, last_cmd = 0;
+  int cmd_no;
   struct char_data *mob = NULL;
   struct obj_data *obj, *obj_to;
 
@@ -2040,10 +2040,6 @@ void reset_zone(zone_rnum zone)
   }
 
   for (cmd_no = 0; ZCMD.command != 'S'; cmd_no++) {
-
-    if (ZCMD.if_flag && !last_cmd)
-      continue;
-
     /*  This is the list of actual zone commands.  If any new
      *  zone commands are added to the game, be certain to update
      *  the list of commands in load_zone() so that the counting
@@ -2051,156 +2047,79 @@ void reset_zone(zone_rnum zone)
      */
     switch (ZCMD.command) {
     case '*':			/* ignore command */
-      last_cmd = 0;
       break;
 
     case 'M':			/* read a mobile */
-      if (mob_index[ZCMD.arg1].number < ZCMD.arg2) {
-	if (ZCMD.created_blob_exists) {
-#ifdef DB_ZONE_RESET_DEBUG
-	  mudlog(CMP, LVL_GOD, FALSE, "ZONE CMD %d:%d: Mobile %d to room %d already exists",
-		 zone_table[zone].number, cmd_no,
-		 GET_MOB_VNUM(&mob_proto[ZCMD.arg1]),
-		 GET_ROOM_VNUM(ZCMD.arg3));
-#endif
-	  last_cmd = 0;
-	}
-	else {
-	  mob = read_mobile(ZCMD.arg1, REAL);
-	  mob->zone_cmd_no = cmd_no;
-	  mob->zone_num = zone;
-	  char_to_room(mob, ZCMD.arg3);
-	  ZCMD.created_blob_exists = 1;
-	  last_cmd = 1;
-	}
-      } else
-	last_cmd = 0;
+      if (!ZCMD.created_blob_exists) {
+	mob = read_mobile(ZCMD.arg1, REAL);
+	mob->zone_cmd_no = cmd_no;
+	mob->zone_num = zone;
+	char_to_room(mob, ZCMD.arg3);
+	ZCMD.created_blob_exists = 1;
+      }
       break;
 
     case 'O':			/* read an object */
-      if (obj_index[ZCMD.arg1].number < ZCMD.arg2) {
-	if (ZCMD.created_blob_exists) {
-#ifdef DB_ZONE_RESET_DEBUG
-	  mudlog(CMP, LVL_GOD, FALSE, "ZONE CMD %d:%d: Object %d to room %d already exists",
-		 zone_table[zone].number, cmd_no,
-		 GET_OBJ_VNUM(&obj_proto[ZCMD.arg1]),
-		 GET_ROOM_VNUM(ZCMD.arg3));
-#endif
-	  last_cmd = 0;
+      if (!ZCMD.created_blob_exists) {
+	if (ZCMD.arg3 != NOWHERE) {
+	  obj = read_object(ZCMD.arg1, REAL);
+	  obj->zone_cmd_no = cmd_no;
+	  obj->zone_num = zone;
+	  obj_to_room(obj, ZCMD.arg3);
+	  ZCMD.created_blob_exists = 1;
+	} else {
+	  obj = read_object(ZCMD.arg1, REAL);
+	  obj->zone_cmd_no = cmd_no;
+	  obj->zone_num = zone;
+	  IN_ROOM(obj) = NOWHERE;
+	  ZCMD.created_blob_exists = 1;
 	}
-	else {
-	  if (ZCMD.arg3 != NOWHERE) {
-	    obj = read_object(ZCMD.arg1, REAL);
-	    obj->zone_cmd_no = cmd_no;
-	    obj->zone_num = zone;
-	    obj_to_room(obj, ZCMD.arg3);
-	    ZCMD.created_blob_exists = 1;
-	    last_cmd = 1;
-	  } else {
-	    obj = read_object(ZCMD.arg1, REAL);
-	    obj->zone_cmd_no = cmd_no;
-	    obj->zone_num = zone;
-	    IN_ROOM(obj) = NOWHERE;
-	    ZCMD.created_blob_exists = 1;
-	    last_cmd = 1;
-	  }
-	}
-      } else
-	last_cmd = 0;
+      }
       break;
 
     case 'P':			/* object to object */
-      if (obj_index[ZCMD.arg1].number < ZCMD.arg2) {
-	if (ZCMD.created_blob_exists) {
-#ifdef DB_ZONE_RESET_DEBUG
-	  mudlog(CMP, LVL_GOD, FALSE, "ZONE CMD %d:%d: Object %d to object %d already exists",
-		 zone_table[zone].number, cmd_no,
-		 GET_OBJ_VNUM(&obj_proto[ZCMD.arg1]),
-		 GET_OBJ_VNUM(&obj_proto[ZCMD.arg3]));
-#endif
-	  last_cmd = 0;
+      if (!ZCMD.created_blob_exists) {
+	obj = read_object(ZCMD.arg1, REAL);
+	obj->zone_cmd_no = cmd_no;
+	obj->zone_num = zone;
+	if (!(obj_to = get_obj_num(ZCMD.arg3))) {
+	  ZONE_ERROR("target container not found, command disabled");
+	  ZCMD.command = '*';
+	  break;
 	}
-	else {
-	  obj = read_object(ZCMD.arg1, REAL);
-	  obj->zone_cmd_no = cmd_no;
-	  obj->zone_num = zone;
-	  if (!(obj_to = get_obj_num(ZCMD.arg3))) {
-	    ZONE_ERROR("target obj not found, command disabled");
-	    ZCMD.command = '*';
-	    break;
-	  }
-	  obj_to_obj(obj, obj_to);
-	  ZCMD.created_blob_exists = 1;
-	  last_cmd = 1;
-	}
-      } else
-	last_cmd = 0;
+	obj_to_obj(obj, obj_to);
+	ZCMD.created_blob_exists = 1;
+      }
       break;
 
     case 'G':			/* obj_to_char */
-      if (!mob) {
-	ZONE_ERROR("attempt to give obj to non-existant mob, command disabled");
-	ZCMD.command = '*';
-	break;
+      if (mob && !ZCMD.created_blob_exists) {
+	obj = read_object(ZCMD.arg1, REAL);
+	obj->zone_cmd_no = cmd_no;
+	obj->zone_num = zone;
+	obj_to_char(obj, mob);
+	ZCMD.created_blob_exists = 1;
       }
-      if (obj_index[ZCMD.arg1].number < ZCMD.arg2) {
-	if (ZCMD.created_blob_exists) {
-#ifdef DB_ZONE_RESET_DEBUG
-	  mudlog(CMP, LVL_GOD, FALSE, "ZONE CMD %d:%d: Object %d to mob %d already exists",
-		 zone_table[zone].number, cmd_no,
-		 GET_OBJ_VNUM(&obj_proto[ZCMD.arg1]),
-		 GET_MOB_VNUM(mob));
-#endif
-	  last_cmd = 0;
-	}
-	else {
-	  obj = read_object(ZCMD.arg1, REAL);
-	  obj->zone_cmd_no = cmd_no;
-	  obj->zone_num = zone;
-	  obj_to_char(obj, mob);
-	  ZCMD.created_blob_exists = 1;
-	  last_cmd = 1;
-	}
-      } else
-	last_cmd = 0;
       break;
 
     case 'E':			/* object to equipment list */
-      if (!mob) {
-	ZONE_ERROR("trying to equip non-existant mob, command disabled");
-	ZCMD.command = '*';
-	break;
-      }
-      if (obj_index[ZCMD.arg1].number < ZCMD.arg2) {
+      if (mob && !ZCMD.created_blob_exists) {
 	if (ZCMD.arg3 < 0 || ZCMD.arg3 >= NUM_WEARS) {
 	  ZONE_ERROR("invalid equipment pos number");
-	} else if (ZCMD.created_blob_exists) {
-#ifdef DB_ZONE_RESET_DEBUG
-	  mudlog(CMP, LVL_GOD, FALSE, "ZONE CMD %d:%d: Object %d to mob %d already exists",
-		 zone_table[zone].number, cmd_no,
-		 GET_OBJ_VNUM(&obj_proto[ZCMD.arg1]),
-		 GET_MOB_VNUM(mob));
-#endif
-	  last_cmd = 0;
-	}
-	else {
+	} else {
 	  obj = read_object(ZCMD.arg1, REAL);
 	  obj->zone_cmd_no = cmd_no;
 	  obj->zone_num = zone;
 	  equip_char(mob, obj, ZCMD.arg3);
 	  ZCMD.created_blob_exists = 1;
-	  last_cmd = 1;
 	}
-      } else
-	last_cmd = 0;
+      }
       break;
 
     case 'R': /* rem obj from room */
       if ((obj = get_obj_in_list_num(ZCMD.arg2, world[ZCMD.arg1].contents)) != NULL)
         extract_obj(obj);
-      last_cmd = 1;
       break;
-
 
     case 'D':			/* set state of door */
       if (ZCMD.arg2 < 0 || ZCMD.arg2 >= NUM_OF_DIRS ||
@@ -2228,7 +2147,6 @@ void reset_zone(zone_rnum zone)
 		  EX_CLOSED);
 	  break;
 	}
-      last_cmd = 1;
       break;
 
     default:
