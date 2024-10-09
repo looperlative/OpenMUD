@@ -61,6 +61,10 @@ const char *attack_types[] =
     "\n"
 };
 
+static void olc_save_mobile(int vnum);
+static void olc_save_object(int vnum);
+static void olc_save_room(int vnum);
+
 static void olc_state_after_push(struct olc_editor_s *ed, int state)
 {
     ed->state_after[1] = ed->state_after[0];
@@ -89,9 +93,30 @@ static void olc_free(struct olc_editor_s *ed, void *junk)
     }
 }
 
-void olc_clear_editor(int idx)
+static void olc_save(struct olc_editor_s *ed)
+{
+    if (ed->vnum > 0)
+    {
+	switch(ed->edit_type)
+	{
+	  case OLC_EDIT_MOBILE:
+	    olc_save_mobile(ed->vnum);
+	    break;
+	  case OLC_EDIT_OBJECT:
+	    olc_save_object(ed->vnum);
+	    break;
+	  case OLC_EDIT_ROOM:
+	    olc_save_room(ed->vnum);
+	    break;
+	}
+    }
+}
+
+static void olc_clear_editor(int idx)
 {
     struct olc_editor_s *ed = &olc_editors[idx];
+
+    olc_save(ed);
 
     // Should free any allocated memory held by this editor.
 
@@ -99,7 +124,7 @@ void olc_clear_editor(int idx)
     memset(ed, 0, sizeof(*ed));
 }
 
-void olc_create_editor(struct char_data *ch)
+static void olc_create_editor(struct char_data *ch)
 {
     ch->desc->olc_editor_idx = 0;
 
@@ -1390,6 +1415,7 @@ ACMD(do_redit)
 	olc_editors[ch->desc->olc_editor_idx].garbage_list = NULL;
 	olc_editors[ch->desc->olc_editor_idx].state = OLC_STATE_REDIT_TOP;
 	olc_editors[ch->desc->olc_editor_idx].vnum = room_vnum;
+	olc_editors[ch->desc->olc_editor_idx].edit_type = OLC_EDIT_ROOM;
 	olc_nanny(ch->desc, "");
 	STATE(ch->desc) = CON_OLC_EDIT;
 	SET_BIT(PLR_FLAGS(ch), PLR_WRITING);
@@ -1421,6 +1447,7 @@ ACMD(do_medit)
 	olc_editors[ch->desc->olc_editor_idx].garbage_list = &olc_mob_garbage;
 	olc_editors[ch->desc->olc_editor_idx].state = OLC_STATE_MEDIT_TOP;
 	olc_editors[ch->desc->olc_editor_idx].vnum = vnum;
+	olc_editors[ch->desc->olc_editor_idx].edit_type = OLC_EDIT_MOBILE;
 	olc_nanny(ch->desc, "");
 	STATE(ch->desc) = CON_OLC_EDIT;
 	SET_BIT(PLR_FLAGS(ch), PLR_WRITING);
@@ -1452,8 +1479,178 @@ ACMD(do_oedit)
 	olc_editors[ch->desc->olc_editor_idx].garbage_list = &olc_obj_garbage;
 	olc_editors[ch->desc->olc_editor_idx].state = OLC_STATE_OEDIT_TOP;
 	olc_editors[ch->desc->olc_editor_idx].vnum = vnum;
+	olc_editors[ch->desc->olc_editor_idx].edit_type = OLC_EDIT_OBJECT;
 	olc_nanny(ch->desc, "");
 	STATE(ch->desc) = CON_OLC_EDIT;
 	SET_BIT(PLR_FLAGS(ch), PLR_WRITING);
     }
+}
+
+static char *olc_bits_to_letters(int bits, char *buf)
+{
+    memset(buf, 0, 33);
+
+    if (bits == 0)
+    {
+	buf[0] = '0';
+	return buf;
+    }
+
+    int pos = 0;
+    for (int i = 0; i < 32; i++)
+	if (bits & (1 << i))
+	    buf[pos++] = 'a' + i;
+
+    return buf;
+}
+
+static void olc_save_mobile(int vnum)
+{
+    int rnum = real_mobile(vnum);
+    if (rnum == NOBODY)
+	return;
+
+    struct char_data *mob = &mob_proto[rnum];
+
+    FILE *fp = fopen("world/mob/medit.mob", "a");
+    if (fp == NULL)
+	return;
+
+    char mob_type = 'E';
+    if (mob->real_abils.str == 11 && mob->real_abils.intel == 11 && mob->real_abils.wis == 11 &&
+	mob->real_abils.dex == 11 && mob->real_abils.con == 11 && mob->real_abils.cha == 11 &&
+	mob->mob_specials.attack_type == 0)
+    {
+	mob_type = 'S';
+    }
+
+    fprintf(fp, "#%d\n", vnum);
+    fprintf(fp, "%s~\n", mob->player.name);
+    fprintf(fp, "%s~\n", mob->player.short_descr);
+    fprintf(fp, "%s~\n", mob->player.long_descr);
+    fprintf(fp, "%s~\n", mob->player.description);
+
+    char action_flags[33];
+    char affect_flags[33];
+    fprintf(fp, "%s %s %d %c\n",
+	    olc_bits_to_letters(MOB_FLAGS(mob) & ~MOB_ISNPC, action_flags),
+	    olc_bits_to_letters(AFF_FLAGS(mob), affect_flags), GET_ALIGNMENT(mob), mob_type);
+    fprintf(fp, "%d %d %d %dd%d+%d %dd%d+%d\n",
+	    GET_LEVEL(mob), 20 - GET_HITROLL(mob), GET_AC(mob) / 10,
+	    mob->mob_specials.hpnodice, mob->mob_specials.hpsizedice, mob->mob_specials.hpextra,
+	    mob->mob_specials.damnodice, mob->mob_specials.damsizedice, GET_DAMROLL(mob));
+    fprintf(fp, "%d %d\n", GET_GOLD(mob), GET_EXP(mob));
+    fprintf(fp, "%d %d %d\n", GET_POS(mob), GET_DEFAULT_POS(mob), GET_SEX(mob));
+
+    if (mob_type == 'E')
+    {
+	if (mob->mob_specials.attack_type > 0)
+	    fprintf(fp, "BareHandAttack: %d\n", mob->mob_specials.attack_type);
+	if (mob->real_abils.str != 11)
+	    fprintf(fp, "Str: %d\n", mob->real_abils.str);
+	if (mob->real_abils.intel != 11)
+	    fprintf(fp, "Int: %d\n", mob->real_abils.intel);
+	if (mob->real_abils.wis != 11)
+	    fprintf(fp, "Wis: %d\n", mob->real_abils.wis);
+	if (mob->real_abils.dex != 11)
+	    fprintf(fp, "Dex: %d\n", mob->real_abils.dex);
+	if (mob->real_abils.con != 11)
+	    fprintf(fp, "Con: %d\n", mob->real_abils.con);
+	if (mob->real_abils.cha != 11)
+	    fprintf(fp, "Cha: %d\n", mob->real_abils.cha);
+	if (mob->real_abils.str == 18)
+	    fprintf(fp, "StrAdd: %d\n", mob->real_abils.str_add);
+	fprintf(fp, "E\n");
+    }
+
+    fclose(fp);
+}
+
+static void olc_save_object(int vnum)
+{
+    int rnum = real_object(vnum);
+    if (rnum == NOTHING)
+	return;
+
+    struct obj_data *obj = &obj_proto[rnum];
+
+    FILE *fp = fopen("world/obj/oedit.obj", "a");
+    if (fp == NULL)
+	return;
+
+    fprintf(fp, "#%d\n", vnum);
+    fprintf(fp, "%s~\n", obj->name);
+    fprintf(fp, "%s~\n", obj->short_description);
+    fprintf(fp, "%s~\n", obj->description != NULL ? obj->description : "");
+    fprintf(fp, "%s~\n", obj->action_description != NULL ? obj->action_description : "");
+
+    char extra_flags[33];
+    char wear_flags[33];
+    fprintf(fp, "%d %s %s\n", GET_OBJ_TYPE(obj),
+	    olc_bits_to_letters(GET_OBJ_EXTRA(obj), extra_flags),
+	    olc_bits_to_letters(GET_OBJ_WEAR(obj), wear_flags));
+    fprintf(fp, "%d %d %d %d\n",
+	    GET_OBJ_VAL(obj, 0), GET_OBJ_VAL(obj, 1), GET_OBJ_VAL(obj, 2), GET_OBJ_VAL(obj, 3));
+    fprintf(fp, "%d %d %d\n", GET_OBJ_WEIGHT(obj), GET_OBJ_COST(obj), GET_OBJ_RENT(obj));
+
+    for (int i = 0; i < MAX_OBJ_AFFECT; i++)
+    {
+	if (obj->affected[i].location > 0)
+	    fprintf(fp, "A\n%d %d\n", obj->affected[i].location, obj->affected[i].modifier);
+    }
+
+    struct extra_descr_data *extra = obj->ex_description;
+    while (extra)
+    {
+	fprintf(fp, "E\n%s~\n%s~\n", extra->keyword, extra->description);
+	extra = extra->next;
+    }
+
+    fclose(fp);
+}
+
+static void olc_save_room(int vnum)
+{
+    int rnum = real_room(vnum);
+    if (rnum == NOWHERE)
+	return;
+
+    struct room_data *room = &world[rnum];
+
+    FILE *fp = fopen("world/wld/redit.wld", "a");
+    if (fp == NULL)
+	return;
+
+    fprintf(fp, "#%d\n", vnum);
+    fprintf(fp, "%s~\n", room->name);
+    fprintf(fp, "%s~\n", room->description);
+
+    char room_flags[33];
+    fprintf(fp, "%d %s %d\n", zone_table[room->zone].number,
+	    olc_bits_to_letters(room->room_flags, room_flags), room->sector_type);
+
+    for (int i = 0; i < NUM_OF_DIRS; i++)
+    {
+	struct room_direction_data *exit = room->dir_option[i];
+
+	if (exit != NULL && exit->to_room != NOWHERE)
+	{
+	    fprintf(fp, "D%d\n%s~\n%s~\n", i,
+		    exit->general_description == NULL ? "" : exit->general_description,
+		    exit->keyword == NULL ? "" : exit->keyword);
+
+	    fprintf(fp, "%d %d %d\n", exit->exit_info, exit->key, world[exit->to_room].number);
+	}
+    }
+
+
+    struct extra_descr_data *extra = room->ex_description;
+    while (extra)
+    {
+	fprintf(fp, "E\n%s~\n%s~\n", extra->keyword, extra->description);
+	extra = extra->next;
+    }
+
+    fprintf(fp, "S\n");
+    fclose(fp);
 }

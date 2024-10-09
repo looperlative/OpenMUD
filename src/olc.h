@@ -48,6 +48,10 @@
 #define OLC_STATE_OEDIT_TOP		15
 #define OLC_STATE_OEDIT_TOPCHOICE	16
 
+#define OLC_EDIT_MOBILE			1
+#define OLC_EDIT_OBJECT			2
+#define OLC_EDIT_ROOM			3
+
 struct olc_garbage_s
 {
     struct olc_garbage_s *next;
@@ -62,6 +66,7 @@ struct olc_editor_s
     struct olc_garbage_s **garbage_list;/* Where to put our garbage. */
 
     /* Specific fields for specific top levels */
+    int edit_type;			/* mobile, object or room? */
     int vnum;				/* vnum of what we are editing. 0 is none. */
     int direction;			/* Direction that we are editing. 0 is none. */
 
