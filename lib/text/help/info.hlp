@@ -7,7 +7,7 @@ defined as follows:
   AC  Roughly equivalent to
 -----------------------------------------------------------
   10  Naked person
-   0  Very Heavily armored (Plate mail, and "two shields") 
+   0  Very Heavily armored (Plate mail, and "two shields")
  -10  Armored battle tank
 
 The score command displays your armor class as a number such as 78/10;
@@ -89,6 +89,13 @@ You can improve your spells by using the practice command.
 See 'help spells' for a list of spells available.
 
 See also: PRACTICE, SPELLS
+#
+"EVADE TRAPS"
+
+This thief skill makes it possible to survive a death trap.  A thief with
+this skill has a chance of completely evading the trap.  A thief with this
+skill that doesn't complete evade the trap will suffer 200hp of damage
+instead of being automatically killed.
 #
 EXPERIENCE XP
 
@@ -267,7 +274,7 @@ MIDGAARD MAP
            |           |                          |          |
            +-----------+------(Concourse)---------+----------+
                                                   |
-                                              Graveyard 
+                                              Graveyard
                                               Entrance
 #
 SHOPS
@@ -279,7 +286,7 @@ merchandise.  Thus, a baker may well refuse to buy your armor, even if it is
 of high quality!
 
 To some people, the prospect of obtaining the entire inventory of a shop by
-murdering the keeper may appear tempting - but beware: The shopkeepers are 
+murdering the keeper may appear tempting - but beware: The shopkeepers are
 often rugged, capable men; roughened by years of trading and, indeed, surviving
 in a world where the only safe prospect is death in the end.
 
@@ -399,7 +406,7 @@ them all, I'd like to extend special thanks to certain people:
   -- Bill Bogstad and Tim Stearns for allowing Circle to exist at JHU.
   -- The DikuMud folk, and the good old WhatMUD implementors Dave & Justin,
      for starting the ball rolling.
-  -- Bryan Jolson, Steven Lacher, Cat Stanton, and Naved Surve, for being 
+  -- Bryan Jolson, Steven Lacher, Cat Stanton, and Naved Surve, for being
      there in the very early days of Circle's development.
   -- Sharon, Ben, Erica, Aly, and Josh, for keeping me sane.
   -- Jules (hamotek sheli) for being the greatest.

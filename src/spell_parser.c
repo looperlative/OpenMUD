@@ -803,7 +803,7 @@ void mag_assign_spells(void)
 	"You feel your strength return.");
 
   spello(SPELL_CLONE, "clone", 80, 65, 5, POS_STANDING,
-	TAR_SELF_ONLY, FALSE, MAG_SUMMONS,
+	TAR_IGNORE, FALSE, MAG_SUMMONS,
 	NULL);
 
   spello(SPELL_COLOR_SPRAY, "color spray", 30, 5, 3, POS_FIGHTING,
@@ -1025,4 +1025,5 @@ void mag_assign_spells(void)
   skillo(SKILL_TRACK, "track");
   skillo(SKILL_ATTACK2, "second attack");
   skillo(SKILL_ATTACK3, "third attack");
+  skillo(SKILL_EVADETRAPS, "evade traps");
 }

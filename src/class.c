@@ -1714,6 +1714,7 @@ void init_spell_levels(void)
   spell_level(SKILL_STEAL, CLASS_THIEF, 4);
   spell_level(SKILL_HIDE, CLASS_THIEF, 5);
   spell_level(SKILL_TRACK, CLASS_THIEF, 6);
+  spell_level(SKILL_EVADETRAPS, CLASS_THIEF, 10);
   spell_level(SKILL_ATTACK2, CLASS_THIEF, 22);
 
   /* WARRIORS */

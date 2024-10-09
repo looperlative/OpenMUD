@@ -174,11 +174,33 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
     look_at_room(ch, 0);
 
   if (ROOM_FLAGGED(IN_ROOM(ch), ROOM_DEATH) && GET_LEVEL(ch) < LVL_IMMORT) {
-    log_death_trap(ch);
-    death_cry(ch);
-    extract_char(ch);
-    return (0);
+    if (GET_SKILL(ch, SKILL_EVADETRAPS)) {
+      if (GET_SKILL(ch, SKILL_EVADETRAPS) >= rand_number(1, 101)) {
+	send_to_char(ch, "You successfully evade the trap!!!!!\r\n");
+      }
+      else {
+	send_to_char(ch, "You detect the trap, but do not completely evade it!\r\n");
+	if (AFF_FLAGGED(ch, AFF_SANCTUARY))
+	  GET_HIT(ch) -= 100;
+	else
+	  GET_HIT(ch) -= 200;
+	update_pos(ch);
+	if (GET_POS(ch) == POS_DEAD) {
+	  log_death_trap(ch);
+	  death_cry(ch);
+	  extract_char(ch);
+	}
+      }
+      return (0);
+    }
+    else {
+      log_death_trap(ch);
+      death_cry(ch);
+      extract_char(ch);
+      return (0);
+    }
   }
+
   return (1);
 }
 
