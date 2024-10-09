@@ -2055,8 +2055,11 @@ void reset_zone(zone_rnum zone)
 	mob->zone_cmd_no = cmd_no;
 	mob->zone_num = zone;
 	char_to_room(mob, ZCMD.arg3);
+	ZCMD.mob = mob;
 	ZCMD.created_blob_exists = 1;
       }
+      else
+	mob = ZCMD.mob;
       break;
 
     case 'O':			/* read an object */
@@ -2066,12 +2069,14 @@ void reset_zone(zone_rnum zone)
 	  obj->zone_cmd_no = cmd_no;
 	  obj->zone_num = zone;
 	  obj_to_room(obj, ZCMD.arg3);
+	  ZCMD.obj = obj;
 	  ZCMD.created_blob_exists = 1;
 	} else {
 	  obj = read_object(ZCMD.arg1, REAL);
 	  obj->zone_cmd_no = cmd_no;
 	  obj->zone_num = zone;
 	  IN_ROOM(obj) = NOWHERE;
+	  ZCMD.obj = obj;
 	  ZCMD.created_blob_exists = 1;
 	}
       }
@@ -2088,6 +2093,12 @@ void reset_zone(zone_rnum zone)
 	  break;
 	}
 	obj_to_obj(obj, obj_to);
+
+	/* obj_to is a container.  Reset closed and locked state to default. */
+	GET_OBJ_VAL(obj_to, 1) = GET_OBJ_VAL(obj_proto + GET_OBJ_RNUM(obj_to), 1);
+
+	/* Note that this object is load and which object was loaded by this rule. */
+	ZCMD.obj = obj;
 	ZCMD.created_blob_exists = 1;
       }
       break;
@@ -2098,6 +2109,7 @@ void reset_zone(zone_rnum zone)
 	obj->zone_cmd_no = cmd_no;
 	obj->zone_num = zone;
 	obj_to_char(obj, mob);
+	ZCMD.obj = obj;
 	ZCMD.created_blob_exists = 1;
       }
       break;
@@ -2111,14 +2123,13 @@ void reset_zone(zone_rnum zone)
 	  obj->zone_cmd_no = cmd_no;
 	  obj->zone_num = zone;
 	  equip_char(mob, obj, ZCMD.arg3);
+	  ZCMD.obj = obj;
 	  ZCMD.created_blob_exists = 1;
 	}
       }
       break;
 
-    case 'R': /* rem obj from room */
-      if ((obj = get_obj_in_list_num(ZCMD.arg2, world[ZCMD.arg1].contents)) != NULL)
-        extract_obj(obj);
+    case 'R': /* rem obj from room */ /* OBSOLETE */
       break;
 
     case 'D':			/* set state of door */
