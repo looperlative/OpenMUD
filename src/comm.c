@@ -1983,7 +1983,9 @@ void close_socket(struct descriptor_data *d)
       free(d->str);
     }
 
-    if (STATE(d) == CON_PLAYING || STATE(d) == CON_DISCONNECT) {
+    if (STATE(d) == CON_PLAYING || STATE(d) == CON_DISCONNECT ||
+	STATE(d) == CON_REMORT_ROLL || STATE(d) == CON_REMORT_STAT1 ||
+	STATE(d) == CON_REMORT_STAT2 || STATE(d) == CON_OLC_EDIT) {
       struct char_data *link_challenged = d->original ? d->original : d->character;
 
       /* We are guaranteed to have a person. */

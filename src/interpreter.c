@@ -361,7 +361,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "motd"     , POS_DEAD    , do_gen_ps   , 0, SCMD_MOTD },
   { "mail"     , POS_STANDING, do_not_here , 1, 0 },
   { "massage"  , POS_RESTING , do_action   , 0, 0 },
-  { "medit"    , POS_DEAD    , do_medit    , LVL_IMPL, 0 },
+  { "medit"    , POS_DEAD    , do_medit    , LVL_IMMORT, 0 },
   { "memories" , POS_RESTING , do_memories , 0, 0 },
   { "mute"     , POS_DEAD    , do_wizutil  , LVL_GOD, SCMD_SQUELCH },
   { "murder"   , POS_FIGHTING, do_hit      , 0, SCMD_MURDER },
@@ -382,7 +382,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "nudge"    , POS_RESTING , do_action   , 0, 0 },
   { "nuzzle"   , POS_RESTING , do_action   , 0, 0 },
 
-  { "oedit"    , POS_DEAD    , do_oedit    , LVL_IMPL, 0 },
+  { "oedit"    , POS_DEAD    , do_oedit    , LVL_IMMORT, 0 },
   { "order"    , POS_RESTING , do_order    , 1, 0 },
   { "offer"    , POS_STANDING, do_not_here , 1, 0 },
   { "open"     , POS_SITTING , do_gen_door , 0, SCMD_OPEN },
@@ -419,7 +419,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "reply"    , POS_SLEEPING, do_reply    , 0, 0 },
   { "rest"     , POS_RESTING , do_rest     , 0, 0 },
   { "read"     , POS_RESTING , do_look     , 0, SCMD_READ },
-  { "redit"    , POS_DEAD    , do_redit    , LVL_IMPL, 0 },
+  { "redit"    , POS_DEAD    , do_redit    , LVL_IMMORT, 0 },
   { "reload"   , POS_DEAD    , do_reboot   , LVL_IMPL, 0 },
   { "recite"   , POS_RESTING , do_use      , 0, SCMD_RECITE },
   { "receive"  , POS_STANDING, do_not_here , 1, 0 },
@@ -547,6 +547,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "yodel"    , POS_RESTING , do_action   , 0, 0 },
 
   { "zclean"   , POS_DEAD    , do_zclean    , LVL_GRGOD, 0 },
+  { "zedit"    , POS_DEAD    , do_zedit    , LVL_GRGOD, 0 },
   { "zreset"   , POS_DEAD    , do_zreset   , LVL_GRGOD, 0 },
 
   { "\n", 0, 0, 0, 0 } };	/* this must be last */
@@ -1195,7 +1196,6 @@ int perform_dupe_check(struct descriptor_data *d)
       do_return(k->character, NULL, 0, 0);
     } else if (k->character && GET_IDNUM(k->character) == id) {
       /* Character taking over their own body. */
-
       if (!target && STATE(k) == CON_PLAYING) {
 	write_to_output(k, "\r\nThis body has been usurped!\r\n");
 	target = k->character;

@@ -52,6 +52,21 @@
 #define OLC_EDIT_OBJECT			2
 #define OLC_EDIT_ROOM			3
 
+#define OLC_ZONEFLAGS_CLOSED		(1 << 0)
+#define OLC_ZONEFLAGS_LOCKED		(1 << 1)
+
+#define OLC_ZONE_MAX_AUTHORS		10
+
+/* DO NOT CHANGE - following structure is used in creating binary file. */
+struct olc_permissions_s
+{
+    int flags;				/* Zone permissions flags */
+
+    int lock_holder;			/* Player ID that requested zone lock */
+    int authors[OLC_ZONE_MAX_AUTHORS];	/* Player IDs that are authors */
+    int editors[OLC_ZONE_MAX_AUTHORS];	/* Player IDs that are editors */
+};
+
 struct olc_garbage_s
 {
     struct olc_garbage_s *next;
@@ -103,9 +118,16 @@ struct olc_editor_s
     sbyte *diceextra8;
 };
 
-ACMD(do_medit);
-ACMD(do_oedit);
-ACMD(do_redit);
+extern const char *olc_zone_flags[];
+
+void do_medit(struct char_data *ch, char *argument, int cmd, int subcmd);
+void do_oedit(struct char_data *ch, char *argument, int cmd, int subcmd);
+void do_redit(struct char_data *ch, char *argument, int cmd, int subcmd);
+void do_zedit(struct char_data *ch, char *argument, int cmd, int subcmd);
 void olc_nanny(struct descriptor_data *d, char *arg);
+void olc_load_permissions(void);
+int olc_ok_to_edit(struct char_data *ch, int vnum);
+int olc_ok_to_enter(struct char_data *ch, struct room_data *rm);
+int olc_ok_to_use_or_rent(struct char_data *ch, int vnum);
 
 #endif /* __olc_h__ */

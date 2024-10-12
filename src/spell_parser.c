@@ -1025,5 +1025,5 @@ void mag_assign_spells(void)
   skillo(SKILL_TRACK, "track");
   skillo(SKILL_ATTACK2, "second attack");
   skillo(SKILL_ATTACK3, "third attack");
-  skillo(SKILL_EVADETRAPS, "evade traps");
+  skillo(SKILL_AVOIDTRAPS, "avoid traps");
 }

@@ -8,6 +8,8 @@
 *  CircleMUD is based on DikuMUD, Copyright (C) 1990, 1991.               *
 ************************************************************************ */
 
+#include "olc.h"
+
 /* arbitrary constants used by index_boot() (must be unique) */
 #define DB_BOOT_WLD	0
 #define DB_BOOT_MOB	1
@@ -163,6 +165,16 @@ struct reset_com {
 
 
 
+/*
+ * Reset mode:
+ *   0: Don't reset, and don't update age.
+ *   1: Reset if no PC's are located in zone.
+ *   2: Just reset.
+ */
+#define ZONE_RESETMODE_DONTRESET	0
+#define ZONE_RESETMODE_NOPCSINZONE	1
+#define ZONE_RESETMODE_RESET		2
+
 /* zone definition structure. for the 'zone-table'   */
 struct zone_data {
    char	*name;		    /* name of this zone                  */
@@ -175,13 +187,7 @@ struct zone_data {
    int	reset_mode;         /* conditions for reset (see below)   */
    zone_vnum number;	    /* virtual number of this zone	  */
    struct reset_com *cmd;   /* command table for reset	          */
-
-   /*
-    * Reset mode:
-    *   0: Don't reset, and don't update age.
-    *   1: Reset if no PC's are located in zone.
-    *   2: Just reset.
-    */
+   struct olc_permissions_s permissions;
 };
 
 

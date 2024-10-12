@@ -19,6 +19,7 @@
 #include "handler.h"
 #include "interpreter.h"
 #include "spells.h"
+#include "olc.h"
 
 /* local vars */
 int extractions_pending = 0;
@@ -391,6 +392,9 @@ void char_to_room(struct char_data *ch, room_rnum room)
   if (ch == NULL || room == NOWHERE || room > top_of_world)
     log("SYSERR: Illegal value(s) passed to char_to_room. (Room: %d/%d Ch: %p",
 		room, top_of_world, ch);
+  else if (!olc_ok_to_enter(ch, &world[room])) {
+    log("%s doesn't have permission to enter room %d", GET_NAME(ch), world[room].number);
+  }
   else {
     ch->next_in_room = world[room].people;
     world[room].people = ch;
@@ -417,6 +421,11 @@ void char_to_room(struct char_data *ch, room_rnum room)
 void obj_to_char(struct obj_data *object, struct char_data *ch)
 {
   if (object && ch) {
+    if (!olc_ok_to_use_or_rent(ch, GET_OBJ_VNUM(object))) {
+      log("%s doesn't have permission to have object %d", GET_NAME(ch), GET_OBJ_VNUM(object));
+      return;
+    }
+
     object->next_content = ch->carrying;
     ch->carrying = object;
     object->carried_by = ch;

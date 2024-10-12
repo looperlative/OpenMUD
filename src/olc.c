@@ -37,9 +37,18 @@
 #include "spells.h"
 #include "olc.h"
 
+extern int num_allocated_zone;
+
 static struct olc_editor_s olc_editors[MAX_EDITORS];
 static struct olc_garbage_s *olc_mob_garbage = NULL;
 static struct olc_garbage_s *olc_obj_garbage = NULL;
+
+const char *olc_zone_flags[] =
+{
+    "CLOSED",
+    "LOCKED",
+    "\n"
+};
 
 const char *attack_types[] =
 {
@@ -334,12 +343,19 @@ void olc_start_getspellname(struct descriptor_data *d, struct olc_editor_s *ed, 
 
 void olc_handle_textedit(struct descriptor_data *d, struct olc_editor_s *ed, char *arg)
 {
+    char *p;
+    char *more = strdup(arg);
+    if (more[0] == '#')
+	more[0] = ' ';
+    while ((p = strchr(more, '~')) != NULL)
+	*p = '-';
+
     if (ed->single_line || ed->want_dice)
     {
 	if (ed->want_dice)
 	{
 	    int i1, i2, i3;
-	    if (sscanf(arg, " %dd%d+%d", &i1, &i2, &i3) == 3 &&
+	    if (sscanf(more, " %dd%d+%d", &i1, &i2, &i3) == 3 &&
 		i1 >= 1 && i1 <= 255 && i2 >=1 && i2 <= 32767 && i3 >= 1 &&
 		(i3 < 256 || (i3 <= 32767 && ed->diceextra32 != NULL)))
 	    {
@@ -350,18 +366,20 @@ void olc_handle_textedit(struct descriptor_data *d, struct olc_editor_s *ed, cha
 		else
 		    *ed->diceextra8 = i3;
 	    }
+	    free(more);
 	}
 	else if (ed->want_spellname)
 	{
-	    int i = find_skill_num(arg);
+	    int i = find_skill_num(more);
 	    if (i >= 1 && i <= TOP_SPELL_DEFINE)
 		*ed->flags_field = i;
+	    free(more);
 	}
 	else
 	{
 	    if (*ed->text_edit_string != NULL)
 		olc_free(ed, *ed->text_edit_string);
-	    *ed->text_edit_string = strdup(arg);
+	    *ed->text_edit_string = more;
 	}
 
     	ed->field_name = NULL;
@@ -372,8 +390,9 @@ void olc_handle_textedit(struct descriptor_data *d, struct olc_editor_s *ed, cha
 	ed->state = olc_state_after_pop(ed);
 	olc_nanny(d, "");
     }
-    else if (*arg == '.')
+    else if (*more == '.')
     {
+	free(more);
 	ed->field_name = NULL;
 	ed->text_edit_string = NULL;
 	ed->single_line = 0;
@@ -383,11 +402,15 @@ void olc_handle_textedit(struct descriptor_data *d, struct olc_editor_s *ed, cha
     }
     else
     {
+	if (*ed->text_edit_string == NULL)
+	    *ed->text_edit_string = strdup("");
+
 	char *s1 = *ed->text_edit_string;
-	CREATE(*ed->text_edit_string, char, strlen(s1) + strlen(arg) + 3);
+	CREATE(*ed->text_edit_string, char, strlen(s1) + strlen(more) + 3);
 	strcpy(*ed->text_edit_string, s1);
-	strcat(*ed->text_edit_string, arg);
+	strcat(*ed->text_edit_string, more);
 	strcat(*ed->text_edit_string, "\r\n");
+	free(more);
     }
 }
 
@@ -1390,7 +1413,7 @@ void olc_nanny(struct descriptor_data *d, char *arg)
     }
 }
 
-ACMD(do_redit)
+void do_redit(struct char_data *ch, char *argument, int cmd, int subcmd)
 {
     skip_spaces(&argument);
 
@@ -1408,6 +1431,12 @@ ACMD(do_redit)
 	return;
     }
 
+    if (!olc_ok_to_edit(ch, room_vnum))
+    {
+	send_to_char(ch, "You don't have permission to edit that zone.\r\n");
+	return;
+    }
+
     olc_create_editor(ch);
 
     if (ch->desc->olc_editor_idx > 0)
@@ -1422,7 +1451,7 @@ ACMD(do_redit)
     }
 }
 
-ACMD(do_medit)
+void do_medit(struct char_data *ch, char *argument, int cmd, int subcmd)
 {
     skip_spaces(&argument);
 
@@ -1440,6 +1469,12 @@ ACMD(do_medit)
 	return;
     }
 
+    if (!olc_ok_to_edit(ch, vnum))
+    {
+	send_to_char(ch, "You don't have permission to edit that zone.\r\n");
+	return;
+    }
+
     olc_create_editor(ch);
 
     if (ch->desc->olc_editor_idx > 0)
@@ -1454,7 +1489,7 @@ ACMD(do_medit)
     }
 }
 
-ACMD(do_oedit)
+void do_oedit(struct char_data *ch, char *argument, int cmd, int subcmd)
 {
     skip_spaces(&argument);
 
@@ -1469,6 +1504,12 @@ ACMD(do_oedit)
     if (rnum == NOBODY)
     {
 	send_to_char(ch, "Object %d doesn't exist.\r\n", vnum);
+	return;
+    }
+
+    if (!olc_ok_to_edit(ch, vnum))
+    {
+	send_to_char(ch, "You don't have permission to edit that zone.\r\n");
 	return;
     }
 
@@ -1653,4 +1694,175 @@ static void olc_save_room(int vnum)
 
     fprintf(fp, "S\n");
     fclose(fp);
+}
+
+/*
+ * Zone editing:
+ *
+ * open, closed
+ * locked, unlocked
+ *
+ * Nobody can rent items from a closed zone. Mortals can't enter a closed zone.  IMMs
+ * can only enter a closed zone if they are an author or editor.
+ *
+ * Locked prevents mob from wandering and is the primary mode for adding/removing
+ * mobiles and objects from a zone.  When zone is unlocked.  Current layout is saved
+ * to the zone file.
+ *
+ * ZEDIT <zone> <command from list below>
+ * OPEN/CLOSE
+ * LOCK/UNLOCK
+ * MOBILE - load mobile
+ * OBJECT - load object on ground
+ * GIVE   - load object and put in mobile inventory
+ * EQUIP  - load object and have mobile wear/hold/wield it.
+ * PURGE  - same as PURGE cmd, but permissions based on OLC system to use it.
+ * CREATE - create new zone
+ * GRANT <author/editor> <player>
+ * REVOKE <author/editor> <player>
+ */
+void zedit_create(struct char_data *ch, int zone_num, char *argument)
+{
+    int rnum = top_of_zone_table + 1;
+    if (rnum >= num_allocated_zone)
+    {
+	send_to_char(ch, "No more zones available.  Reboot to get more zones.\r\n");
+	return;
+    }
+
+    zone_table[rnum].number = zone_num;
+    zone_table[rnum].reset_mode = ZONE_RESETMODE_NOPCSINZONE;
+    zone_table[rnum].name = strdup(argument);
+    zone_table[rnum].bot = zone_num * 100;
+    zone_table[rnum].top = zone_num * 100 + 99;
+    zone_table[rnum].lifespan = 20;
+    zone_table[rnum].permissions.flags = OLC_ZONEFLAGS_CLOSED;
+
+    CREATE(zone_table[rnum].cmd, struct reset_com, 1);
+    zone_table[rnum].cmd[0].command = 'S';
+
+    top_of_zone_table++;
+    mudlog(NRM, GET_LEVEL(ch), TRUE, "%s created zone %d (%d) - '%s'",
+	   GET_NAME(ch), zone_num, rnum, argument);
+}
+
+void do_zedit(struct char_data *ch, char *argument, int cmd, int subcmd)
+{
+    int zone;
+    int nconsumed;
+    char *s1 = NULL;
+
+    int nfields = sscanf(argument, "%d %ms %n", &zone, &s1, &nconsumed);
+    if (nfields < 2)
+    {
+	send_to_char(ch, "ZEDIT <zone> <command> ...\r\n");
+	return;
+    }
+
+    int rnum = real_zone(zone);
+    if (strncmp("create", s1, strlen(s1)) == 0)
+    {
+	if (rnum != NOWHERE)
+	{
+	    send_to_char(ch, "Zone %d already exists\r\n", zone);
+	    return;
+	}
+
+	zedit_create(ch, zone, argument + nconsumed);
+	return;
+    }
+
+    if (rnum == NOWHERE)
+    {
+	send_to_char(ch, "Zone %d doesn't exist\r\n", zone);
+	return;
+    }
+}
+
+int olc_vnum_to_zone_rnum(int vnum)
+{
+    for (int i = 0; i <= top_of_zone_table; i++)
+	if (zone_table[i].bot <= vnum && zone_table[i].top >= vnum)
+	    return i;
+    return NOWHERE;
+}
+
+int olc_ok_to_edit(struct char_data *ch, int vnum)
+{
+    if (!IS_NPC(ch) && GET_LEVEL(ch) >= LVL_GRGOD)
+	return 1;
+
+    int rnum = olc_vnum_to_zone_rnum(vnum);
+    if (rnum == NOWHERE)
+	return 0;
+
+    struct zone_data *z = &zone_table[rnum];
+    struct olc_permissions_s *perm = &z->permissions;
+
+    if ((perm->flags & OLC_ZONEFLAGS_CLOSED) == 0)
+	return 0;
+
+    for (int i = 0; i < OLC_ZONE_MAX_AUTHORS; i++)
+    {
+	if (perm->authors[i] == GET_PFILEPOS(ch) || perm->editors[i] == GET_PFILEPOS(ch))
+	    return 1;
+    }
+
+    return 0;
+}
+
+int olc_ok_to_enter(struct char_data *ch, struct room_data *rm)
+{
+    if (IS_NPC(ch) || GET_LEVEL(ch) >= LVL_IMMORT)
+	return 1;
+
+    if ((zone_table[rm->zone].permissions.flags & OLC_ZONEFLAGS_CLOSED))
+	return 0;
+
+    return 1;
+}
+
+int olc_ok_to_use_or_rent(struct char_data *ch, int vnum)
+{
+    if (!IS_NPC(ch) && GET_LEVEL(ch) < LVL_GRGOD)
+    {
+	int rnum = olc_vnum_to_zone_rnum(vnum);
+	if ((zone_table[rnum].permissions.flags & OLC_ZONEFLAGS_CLOSED))
+	    return 0;
+    }
+
+    return 1;
+}
+
+void olc_load_permissions(void)
+{
+    FILE *fp = fopen("world/permission.dat", "r");
+    if (fp == NULL)
+	return;
+
+    for (int i = 0; i <= top_of_zone_table; i++)
+    {
+	int vnum = zone_table[i].number;
+	if (fseek(fp, vnum * sizeof(struct olc_permissions_s), SEEK_SET) == 0)
+	{
+	    int n = fread(&zone_table[i].permissions, sizeof(struct olc_permissions_s), 1, fp);
+	    n = n;
+	}
+    }
+}
+
+void olc_save_permissions(int vnum)
+{
+    FILE *fp = fopen("world/permission.dat", "r+");
+    if (fp == NULL)
+	return;
+
+    int rnum = real_zone(vnum);
+    if (rnum == NOWHERE)
+	return;
+
+    if (fseek(fp, vnum * sizeof(struct olc_permissions_s), SEEK_SET) == 0)
+    {
+	fwrite(&zone_table[rnum].permissions, sizeof(struct olc_permissions_s), 1, fp);
+    }
 }

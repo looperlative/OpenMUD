@@ -106,7 +106,7 @@
 /* New skills may be added here up to MAX_SKILLS (200) */
 #define SKILL_ATTACK2		    141 /* Reserved Skill[] DO NOT CHANGE */
 #define SKILL_ATTACK3		    142 /* Reserved Skill[] DO NOT CHANGE */
-#define SKILL_EVADETRAPS	    143 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_AVOIDTRAPS	    143 /* Reserved Skill[] DO NOT CHANGE */
 
 
 /*

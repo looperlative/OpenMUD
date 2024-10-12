@@ -21,6 +21,7 @@
 #include "house.h"
 #include "screen.h"
 #include "constants.h"
+#include "olc.h"
 
 /*   external vars  */
 extern FILE *player_fl;
@@ -1901,12 +1902,18 @@ ACMD(do_wizutil)
 /* FIXME: overflow possible */
 size_t print_zone_to_buf(char *bufptr, size_t left, zone_rnum zone)
 {
+  char buf[128];
+
+  if (zone_table[zone].permissions.flags)
+    sprintbit(zone_table[zone].permissions.flags, olc_zone_flags, buf, sizeof(buf));
+  else
+    buf[0] = '\0';
   return snprintf(bufptr, left,
-	"%3d %-30.30s Age: %3d; Reset: %3d (%1d); Empty: %3d; Range: %5d-%5d\r\n",
+	"%3d %-30.30s Age: %3d; Reset: %3d (%1d); Empty: %3d; Range: %5d-%5d %s\r\n",
 	zone_table[zone].number, zone_table[zone].name,
 	zone_table[zone].age, zone_table[zone].lifespan,
 	zone_table[zone].reset_mode, zone_table[zone].empty_age,
-	zone_table[zone].bot, zone_table[zone].top);
+	zone_table[zone].bot, zone_table[zone].top, buf);
 }
 
 

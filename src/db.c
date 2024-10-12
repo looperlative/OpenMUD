@@ -31,20 +31,29 @@
 
 struct room_data *world = NULL;	/* array of rooms		 */
 room_rnum top_of_world = 0;	/* ref to top element of world	 */
+room_rnum original_top_of_world = 0;
+int num_allocated_world = 0;	/* Allocated size of world table */
 
 struct char_data *character_list = NULL;	/* global linked list of
 						 * chars	 */
 struct index_data *mob_index;	/* index table for mobile file	 */
 struct char_data *mob_proto;	/* prototypes for mobs		 */
 mob_rnum top_of_mobt = 0;	/* top of mobile index table	 */
+mob_rnum original_top_of_mobt = 0;
+int num_allocated_mobt = 0;	/* Allocated size of mob tables	 */
 
 struct obj_data *object_list = NULL;	/* global linked list of objs	 */
 struct index_data *obj_index;	/* index table for object file	 */
 struct obj_data *obj_proto;	/* prototypes for objs		 */
 obj_rnum top_of_objt = 0;	/* top of object index table	 */
+obj_rnum original_top_of_objt = 0;
+int num_allocated_objt = 0;	/* Allocated size of obj tables	 */
 
 struct zone_data *zone_table;	/* zone table			 */
 zone_rnum top_of_zone_table = 0;/* top element of zone tab	 */
+zone_rnum original_top_of_zone_table = 0;
+int num_allocated_zone = 0;	/* Allocated size of zone table */
+
 struct message_list fight_messages[MAX_MESSAGES];	/* fighting messages	 */
 
 struct player_index_element *player_table = NULL;	/* index to plr file	 */
@@ -270,6 +279,9 @@ void boot_world(void)
     log("Loading shops.");
     index_boot(DB_BOOT_SHP);
   }
+
+  log("Loading zone permissions.");
+  olc_load_permissions();
 }
 
 
@@ -752,28 +764,32 @@ void index_boot(int mode)
    */
   switch (mode) {
   case DB_BOOT_WLD:
-    CREATE(world, struct room_data, rec_count);
+    CREATE(world, struct room_data, rec_count * 2);
     size[0] = sizeof(struct room_data) * rec_count;
     log("   %d rooms, %d bytes.", rec_count, size[0]);
+    num_allocated_world = rec_count * 2;
     break;
   case DB_BOOT_MOB:
-    CREATE(mob_proto, struct char_data, rec_count);
+    CREATE(mob_proto, struct char_data, rec_count * 2);
     CREATE(mob_index, struct index_data, rec_count);
     size[0] = sizeof(struct index_data) * rec_count;
     size[1] = sizeof(struct char_data) * rec_count;
     log("   %d mobs, %d bytes in index, %d bytes in prototypes.", rec_count, size[0], size[1]);
+    num_allocated_mobt = rec_count * 2;
     break;
   case DB_BOOT_OBJ:
-    CREATE(obj_proto, struct obj_data, rec_count);
+    CREATE(obj_proto, struct obj_data, rec_count * 2);
     CREATE(obj_index, struct index_data, rec_count);
     size[0] = sizeof(struct index_data) * rec_count;
     size[1] = sizeof(struct obj_data) * rec_count;
     log("   %d objs, %d bytes in index, %d bytes in prototypes.", rec_count, size[0], size[1]);
+    num_allocated_objt = rec_count * 2;
     break;
   case DB_BOOT_ZON:
-    CREATE(zone_table, struct zone_data, rec_count);
+    CREATE(zone_table, struct zone_data, rec_count * 2);
     size[0] = sizeof(struct zone_data) * rec_count;
     log("   %d zones, %d bytes.", rec_count, size[0]);
+    num_allocated_zone = rec_count * 2;
     break;
   case DB_BOOT_HLP:
     CREATE(help_table, struct help_index_element, rec_count);
@@ -977,6 +993,7 @@ void parse_room(FILE *fl, int virtual_nr)
       break;
     case 'S':			/* end of room */
       top_of_world = room_nr++;
+      original_top_of_world = top_of_world;
       return;
     default:
       log("%s", buf);
@@ -1408,6 +1425,7 @@ void parse_mobile(FILE *mob_f, int nr)
   mob_proto[i].desc = NULL;
 
   top_of_mobt = i++;
+  original_top_of_mobt = top_of_mobt;
 }
 
 
@@ -1543,6 +1561,7 @@ char *parse_object(FILE *obj_f, int nr)
     case '#':
       check_object(obj_proto + i);
       top_of_objt = i++;
+      original_top_of_objt = top_of_objt;
       return (line);
     default:
       log("SYSERR: Format error in (%c): %s", *line, buf2);
@@ -1652,6 +1671,7 @@ void load_zones(FILE *fl, char *zonename)
   }
 
   top_of_zone_table = zone++;
+  original_top_of_zone_table = top_of_zone_table;
 }
 
 #undef Z
@@ -1934,8 +1954,9 @@ void zone_update(void)
   /* dequeue zones (if possible) and reset */
   /* this code is executed every 10 seconds (i.e. PULSE_ZONE) */
   for (update_u = reset_q.head; update_u; update_u = update_u->next)
-    if (zone_table[update_u->zone_to_reset].reset_mode == 2 ||
-	is_empty(update_u->zone_to_reset)) {
+    if ((zone_table[update_u->zone_to_reset].reset_mode == 2 ||
+	 is_empty(update_u->zone_to_reset)) &&
+	zone_table[update_u->zone_to_reset].permissions.flags == 0) {
       reset_zone(update_u->zone_to_reset);
       mudlog(CMP, LVL_GOD, FALSE, "Auto zone reset: %s", zone_table[update_u->zone_to_reset].name);
       /* dequeue */
@@ -2873,7 +2894,11 @@ room_rnum real_room(room_vnum vnum)
   room_rnum bot, top, mid;
 
   bot = 0;
-  top = top_of_world;
+  top = original_top_of_world;
+
+  for (int i = original_top_of_world + 1; i <= top_of_world; i++)
+    if (world[i].number == vnum)
+      return i;
 
   /* perform binary search on world-table */
   for (;;) {
@@ -2898,7 +2923,11 @@ mob_rnum real_mobile(mob_vnum vnum)
   mob_rnum bot, top, mid;
 
   bot = 0;
-  top = top_of_mobt;
+  top = original_top_of_mobt;
+
+  for (int i = original_top_of_mobt + 1; i <= top_of_mobt; i++)
+    if (mob_index[i].vnum == vnum)
+      return i;
 
   /* perform binary search on mob-table */
   for (;;) {
@@ -2922,7 +2951,11 @@ obj_rnum real_object(obj_vnum vnum)
   obj_rnum bot, top, mid;
 
   bot = 0;
-  top = top_of_objt;
+  top = original_top_of_objt;
+
+  for (int i = original_top_of_objt + 1; i <= top_of_objt; i++)
+    if (obj_index[i].vnum == vnum)
+      return i;
 
   /* perform binary search on obj-table */
   for (;;) {
@@ -2946,7 +2979,11 @@ room_rnum real_zone(room_vnum vnum)
   room_rnum bot, top, mid;
 
   bot = 0;
-  top = top_of_zone_table;
+  top = original_top_of_zone_table;
+
+  for (int i = original_top_of_zone_table + 1; i <= top_of_zone_table; i++)
+    if (zone_table[i].number == vnum)
+      return i;
 
   /* perform binary search on zone-table */
   for (;;) {
