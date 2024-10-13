@@ -121,6 +121,46 @@ static void olc_save(struct olc_editor_s *ed)
     }
 }
 
+void olc_load_permissions(void)
+{
+    FILE *fp = fopen("world/permission.dat", "r");
+    if (fp == NULL)
+	return;
+
+    for (int i = 0; i <= top_of_zone_table; i++)
+    {
+	int vnum = zone_table[i].number;
+	if (fseek(fp, vnum * sizeof(struct olc_permissions_s), SEEK_SET) == 0)
+	{
+	    int n = fread(&zone_table[i].permissions, sizeof(struct olc_permissions_s), 1, fp);
+	    n = n;
+	}
+    }
+
+    fclose(fp);
+}
+
+void olc_save_permissions(int vnum)
+{
+    FILE *fp = fopen("world/permission.dat", "r+");
+    if (fp == NULL)
+	return;
+
+    int rnum = real_zone(vnum);
+    if (rnum == NOWHERE)
+    {
+	fclose(fp);
+	return;
+    }
+
+    if (fseek(fp, vnum * sizeof(struct olc_permissions_s), SEEK_SET) == 0)
+    {
+	fwrite(&zone_table[rnum].permissions, sizeof(struct olc_permissions_s), 1, fp);
+    }
+
+    fclose(fp);
+}
+
 static void olc_clear_editor(int idx)
 {
     struct olc_editor_s *ed = &olc_editors[idx];
@@ -1744,6 +1784,8 @@ void zedit_create(struct char_data *ch, int zone_num, char *argument)
     top_of_zone_table++;
     mudlog(NRM, GET_LEVEL(ch), TRUE, "%s created zone %d (%d) - '%s'",
 	   GET_NAME(ch), zone_num, rnum, argument);
+
+    olc_save_permissions(zone_num);
 }
 
 void do_zedit(struct char_data *ch, char *argument, int cmd, int subcmd)
@@ -1832,37 +1874,4 @@ int olc_ok_to_use_or_rent(struct char_data *ch, int vnum)
     }
 
     return 1;
-}
-
-void olc_load_permissions(void)
-{
-    FILE *fp = fopen("world/permission.dat", "r");
-    if (fp == NULL)
-	return;
-
-    for (int i = 0; i <= top_of_zone_table; i++)
-    {
-	int vnum = zone_table[i].number;
-	if (fseek(fp, vnum * sizeof(struct olc_permissions_s), SEEK_SET) == 0)
-	{
-	    int n = fread(&zone_table[i].permissions, sizeof(struct olc_permissions_s), 1, fp);
-	    n = n;
-	}
-    }
-}
-
-void olc_save_permissions(int vnum)
-{
-    FILE *fp = fopen("world/permission.dat", "r+");
-    if (fp == NULL)
-	return;
-
-    int rnum = real_zone(vnum);
-    if (rnum == NOWHERE)
-	return;
-
-    if (fseek(fp, vnum * sizeof(struct olc_permissions_s), SEEK_SET) == 0)
-    {
-	fwrite(&zone_table[rnum].permissions, sizeof(struct olc_permissions_s), 1, fp);
-    }
 }
