@@ -97,6 +97,7 @@
 #define BAN_FILE	LIB_ETC"badsites"  /* for the siteban system	*/
 #define HCONTROL_FILE	LIB_ETC"hcontrol"  /* for the house system	*/
 #define TIME_FILE	LIB_ETC"time"	   /* for calendar system	*/
+#define CONFIG_FILE	LIB_ETC"config"	   /* runtime tunables override	*/
 
 /* public procedures in db.c */
 void	boot_db(void);

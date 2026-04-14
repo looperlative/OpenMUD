@@ -114,6 +114,7 @@ void reset_zone(zone_rnum zone);
 int file_to_string(const char *name, char *buf);
 int file_to_string_alloc(const char *name, char **buf);
 void reboot_wizlists(void);
+void load_config(void);
 ACMD(do_reboot);
 void boot_world(void);
 int count_alias_records(FILE *fl);
@@ -168,6 +169,133 @@ void reboot_wizlists(void)
 {
   file_to_string_alloc(WIZLIST_FILE, &wizlist);
   file_to_string_alloc(IMMLIST_FILE, &immlist);
+}
+
+
+/*
+ * Parse a runtime config file of `key value` lines (comments begin with #)
+ * and override the compile-time defaults in config.c.  Unknown keys log a
+ * warning and are skipped.  Absence of the file is not an error.
+ */
+void load_config(void)
+{
+  extern int pk_allowed, pt_allowed, level_can_shout, holler_move_cost;
+  extern int tunnel_size, max_exp_gain, max_exp_loss;
+  extern int max_npc_corpse_time, max_pc_corpse_time;
+  extern int idle_void, idle_rent_time;
+  extern int dts_are_dumps, load_into_inventory, track_through_doors;
+  extern int immort_level_ok, free_rent, max_obj_save, min_rent_cost;
+  extern int auto_save, autosave_time, crash_file_timeout, rent_file_timeout;
+  extern int max_filesize, max_bad_pws, siteok_everyone, nameserver_is_slow;
+  extern int use_autowiz, movement_is_free;
+  extern char *OK, *NOPERSON, *NOEFFECT;
+
+  static const struct {
+    const char *key;
+    int *ptr;
+  } ints[] = {
+    { "pk_allowed",           &pk_allowed           },
+    { "pt_allowed",           &pt_allowed           },
+    { "level_can_shout",      &level_can_shout      },
+    { "holler_move_cost",     &holler_move_cost     },
+    { "tunnel_size",          &tunnel_size          },
+    { "max_exp_gain",         &max_exp_gain         },
+    { "max_exp_loss",         &max_exp_loss         },
+    { "max_npc_corpse_time",  &max_npc_corpse_time  },
+    { "max_pc_corpse_time",   &max_pc_corpse_time   },
+    { "idle_void",            &idle_void            },
+    { "idle_rent_time",       &idle_rent_time       },
+    { "dts_are_dumps",        &dts_are_dumps        },
+    { "load_into_inventory",  &load_into_inventory  },
+    { "track_through_doors",  &track_through_doors  },
+    { "immort_level_ok",      &immort_level_ok      },
+    { "free_rent",            &free_rent            },
+    { "max_obj_save",         &max_obj_save         },
+    { "min_rent_cost",        &min_rent_cost        },
+    { "auto_save",            &auto_save            },
+    { "autosave_time",        &autosave_time        },
+    { "crash_file_timeout",   &crash_file_timeout   },
+    { "rent_file_timeout",    &rent_file_timeout    },
+    { "max_filesize",         &max_filesize         },
+    { "max_bad_pws",          &max_bad_pws          },
+    { "siteok_everyone",      &siteok_everyone      },
+    { "nameserver_is_slow",   &nameserver_is_slow   },
+    { "use_autowiz",          &use_autowiz          },
+    { "movement_is_free",     &movement_is_free     },
+    { NULL, NULL }
+  };
+  static const struct {
+    const char *key;
+    char **ptr;
+  } strs[] = {
+    { "OK",       &OK       },
+    { "NOPERSON", &NOPERSON },
+    { "NOEFFECT", &NOEFFECT },
+    { NULL, NULL }
+  };
+
+  FILE *fl;
+  char line[MAX_STRING_LENGTH];
+  char key[MAX_INPUT_LENGTH], val[MAX_STRING_LENGTH];
+  int lineno = 0, i, matched;
+
+  if (!(fl = fopen(CONFIG_FILE, "r"))) {
+    log("Config: %s not found; using compiled defaults.", CONFIG_FILE);
+    return;
+  }
+  log("Loading runtime config from %s.", CONFIG_FILE);
+
+  while (fgets(line, sizeof(line), fl)) {
+    char *p;
+    lineno++;
+    /* strip trailing newline */
+    if ((p = strchr(line, '\n'))) *p = '\0';
+    if ((p = strchr(line, '\r'))) *p = '\0';
+    /* skip leading whitespace */
+    p = line;
+    while (*p == ' ' || *p == '\t') p++;
+    if (*p == '\0' || *p == '#') continue;
+
+    if (sscanf(p, "%s %[^\n]", key, val) < 2) {
+      log("Config: %s:%d: malformed line, skipping.", CONFIG_FILE, lineno);
+      continue;
+    }
+    /* trim trailing whitespace from val */
+    {
+      int vl = strlen(val);
+      while (vl > 0 && (val[vl-1] == ' ' || val[vl-1] == '\t')) val[--vl] = '\0';
+    }
+
+    matched = 0;
+    for (i = 0; ints[i].key; i++) {
+      if (!strcmp(key, ints[i].key)) {
+        *ints[i].ptr = atoi(val);
+        matched = 1;
+        break;
+      }
+    }
+    if (matched) continue;
+    for (i = 0; strs[i].key; i++) {
+      if (!strcmp(key, strs[i].key)) {
+        char *buf = malloc(strlen(val) + 3);
+        /* translate literal \r\n and \n escapes into real chars */
+        char *src = val, *dst = buf;
+        while (*src) {
+          if (src[0] == '\\' && src[1] == 'r') { *dst++ = '\r'; src += 2; }
+          else if (src[0] == '\\' && src[1] == 'n') { *dst++ = '\n'; src += 2; }
+          else if (src[0] == '\\' && src[1] == 't') { *dst++ = '\t'; src += 2; }
+          else *dst++ = *src++;
+        }
+        *dst = '\0';
+        *strs[i].ptr = buf;
+        matched = 1;
+        break;
+      }
+    }
+    if (!matched)
+      log("Config: %s:%d: unknown key '%s', skipping.", CONFIG_FILE, lineno, key);
+  }
+  fclose(fl);
 }
 
 
@@ -395,6 +523,8 @@ void boot_db(void)
   zone_rnum i;
 
   log("Boot db -- BEGIN.");
+
+  load_config();
 
   log("Resetting the game time:");
   reset_time();

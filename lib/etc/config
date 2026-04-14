@@ -1,0 +1,50 @@
+# CircleMUD runtime configuration.
+#
+# Each line is `key value`.  Blank lines and lines beginning with # are
+# ignored.  Any key omitted keeps the compile-time default from
+# src/config.c.  String values may use \r, \n, \t escapes.
+#
+# This file is shipped as the distribution default at lib/etc/config and
+# copied to lib-run/etc/config by bootstrap.sh.  Edit the copy in
+# lib-run/, not this file.
+
+# --- Game play ---
+pk_allowed           0
+pt_allowed           0
+level_can_shout      1
+holler_move_cost     20
+tunnel_size          2
+max_exp_gain         100000
+max_exp_loss         500000
+max_npc_corpse_time  5
+max_pc_corpse_time   10
+idle_void            8
+idle_rent_time       48
+dts_are_dumps        1
+load_into_inventory  0
+track_through_doors  1
+immort_level_ok      0
+
+# --- Rent / crashsave ---
+free_rent            1
+max_obj_save         30
+min_rent_cost        100
+auto_save            1
+autosave_time        5
+crash_file_timeout   10
+rent_file_timeout    30
+
+# --- Game operation ---
+max_filesize         50000
+max_bad_pws          3
+siteok_everyone      1
+nameserver_is_slow   0
+
+# --- Autowiz / misc ---
+use_autowiz          1
+movement_is_free     0
+
+# --- Short messages ---
+OK        Okay.\r\n
+NOPERSON  No-one by that name here.\r\n
+NOEFFECT  Nothing seems to happen.\r\n
