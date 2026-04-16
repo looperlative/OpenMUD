@@ -4,8 +4,8 @@ use Data::Dumper qw(Dumper);
 use File::Compare;
 use File::Copy;
 
-my $newfile = 'lib/mudwho.html';
-my $oldfile = 'lib/mudwho.html.last';
+my $newfile = 'lib-run/mudwho.html';
+my $oldfile = 'lib-run/mudwho.html.last';
 
 my $exists = -s $oldfile;
 my $same = compare($newfile, $oldfile);
@@ -26,7 +26,7 @@ if (! -s $oldfile || compare($newfile, $oldfile) != 0) {
     }
     close(IFILE);
 
-    open(OFILE, '>', 'lib/www/mudwho.html') or die "Couldn't open lib/www/mudwho.html";
+    open(OFILE, '>', 'lib-run/www/mudwho.html') or die "Couldn't open lib-run/www/mudwho.html";
     print OFILE "<HTML>\n<HEAD>\n<TITLE>Who is on the Mud?</TITLE>\n";
     print OFILE '<link rel="stylesheet" href="mudwho.css">' . "\n</HEAD>\n";
     print OFILE "<BODY>\n<H1>Who is playing right now?</H1>\n<HR>\n";
@@ -43,6 +43,6 @@ if (! -s $oldfile || compare($newfile, $oldfile) != 0) {
     print OFILE "</table>\n</BODY>\n</HTML>\n";
     close(OFILE);
 
-    copy("lib/www/mudwho.html", "/var/www/html/mudwho.html");
-    copy("lib/www/mudwho.css", "/var/www/html/mudwho.css");
+    copy("lib-run/www/mudwho.html", "/var/www/html/mudwho.html");
+    copy("lib-run/www/mudwho.css", "/var/www/html/mudwho.css");
 }

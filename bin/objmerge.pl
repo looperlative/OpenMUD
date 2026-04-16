@@ -5,7 +5,7 @@ use Data::Dumper qw(Dumper);
 #
 # Get the names of all of the zone files.
 #
-my $zondirname = 'lib/world/zon';
+my $zondirname = 'lib-run/world/zon';
 opendir(ZDIR, $zondirname) or die "Couldn't open zone directory $zondirname\n";
 
 my @zonfiles;
@@ -56,7 +56,7 @@ foreach my $zname (@zonfiles) {
 #
 # Get the names of all of the object files.
 #
-my $objdirname = 'lib/world/obj';
+my $objdirname = 'lib-run/world/obj';
 opendir(ODIR, $objdirname) or die "Couldn't open object directory $objdirname\n";
 
 my @objfiles;

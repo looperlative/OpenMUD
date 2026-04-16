@@ -122,21 +122,21 @@ proc_syslog () {
 
 backup_playerfile () {
   # Find the # to set the new log file to.
-  if [ -s lib/etc/players.$PSAVES ]; then
+  if [ -s lib-run/etc/players.$PSAVES ]; then
     declare -i newsave=$PSAVES+1
   else
     declare -i newsave=1
-    while [ -s lib/etc/players.$newsave ]; do newsave=$newsave+1; done
+    while [ -s lib-run/etc/players.$newsave ]; do newsave=$newsave+1; done
   fi
 
   # Rotate the logs.
   declare -i y=2
   while [ $y -lt $newsave ]; do
     declare -i x=$y-1
-    mv -f lib/etc/players.$y lib/etc/players.$x
+    mv -f lib-run/etc/players.$y lib-run/etc/players.$x
     y=$y+1
   done
-  cp -f lib/etc/players lib/etc/players.$newsave
+  cp -f lib-run/etc/players lib-run/etc/players.$newsave
 }
 
 

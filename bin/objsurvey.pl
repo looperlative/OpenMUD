@@ -14,7 +14,7 @@ if ($argc >= 1) {
 #
 # Get the names of all of the object files.
 #
-my $objdirname = 'lib/world/obj';
+my $objdirname = 'lib-run/world/obj';
 opendir(ODIR, $objdirname) or die "Couldn't open object directory $objdirname\n";
 
 my @objfiles;

@@ -5,7 +5,7 @@ use Data::Dumper qw(Dumper);
 #
 # Get the names of all of the zone files.
 #
-my $zondirname = 'lib/world/zon';
+my $zondirname = 'lib-run/world/zon';
 opendir(ZDIR, $zondirname) or die "Couldn't open zone directory $zondirname\n";
 
 my @roomfiles;
@@ -56,7 +56,7 @@ foreach my $zname (@roomfiles) {
 #
 # Get the names of all of the room files.
 #
-my $roomdirname = 'lib/world/wld';
+my $roomdirname = 'lib-run/world/wld';
 opendir(RDIR, $roomdirname) or die "Couldn't open mobile directory $roomdirname\n";
 
 my @roomfiles;

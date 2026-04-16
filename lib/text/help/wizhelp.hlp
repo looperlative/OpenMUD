@@ -231,6 +231,26 @@ Example:
 
 See also: VNUM
 #
+MEDIT
+
+Usage: medit <mobile vnum>
+
+Opens a menu-driven editor on the given mobile prototype.  You must be
+an author or editor of the zone that contains the vnum, and the zone
+must be CLOSED.  Select a field by typing its number; enter '.' from
+the top menu to exit.
+
+Editable fields include name/aliases, short/long/detailed descriptions,
+action flags, affect flags, alignment, level, hitroll, AC, hp and damage
+dice, gold, experience, load position, default position, sex, attack
+type, and the six abilities.
+
+Changes are appended to world/mob/medit.mob as they are made; the
+mobmerge utility folds them back into the canonical .mob files when
+run.
+
+See also: OLC, OEDIT, REDIT, ZEDIT, VNUM
+#
 MUTE
 
 Usage: mute <victim>
@@ -264,21 +284,54 @@ Allows you to hear or ignore messages coming over the wiznet.
 
 See also: WIZNET
 #
+OEDIT
+
+Usage: oedit <object vnum>
+
+Opens a menu-driven editor on the given object prototype.  You must be
+an author or editor of the zone that contains the vnum, and the zone
+must be CLOSED.  Select a field by typing its number; enter '.' from
+the top menu to exit.
+
+Editable fields include name/aliases, short and long descriptions,
+action description, type, wear flags, extra flags, weight, cost, rent,
+the four type-specific value slots (weapon damage, armor AC, potion
+spells, staff charges, container capacity, etc.), applied affects, and
+extra descriptions.
+
+Changes are appended to world/obj/oedit.obj as they are made and are
+folded into the canonical .obj files by the merge tooling.
+
+See also: OLC, MEDIT, REDIT, ZEDIT, VNUM
+#
 OLC
 
-Usage: olc { . | set | show | obj | mob | room} [args]
+OnLine Creation.  The OLC command suite lets authorized builders create
+and modify areas without rebooting the MUD.  Four editors are provided,
+plus a merge pipeline that folds edits back into canonical world files.
 
-   .: Repeat last modification command
- set: Set OLC characteristics
-show: Show OLC characteristics
- obj: Modify an object
- mob: Modify a mob
-room: Modify a room
+Editors:
+  MEDIT <vnum>    Edit a mobile (monster)
+  OEDIT <vnum>    Edit an object
+  REDIT <vnum>    Edit a room
+  ZEDIT <zone>    Manage a zone, its permissions, and its reset commands
 
-OnLine Creation.  A feature which will eventually allow the creation
-of areas ONLINE, without having to reboot the system.
+Each editor is menu-driven; select a field by number and enter '.' from
+the top menu to exit.  MEDIT/OEDIT/REDIT append their changes to scratch
+files (medit.mob, oedit.obj, redit.wld) which are later reconciled into
+the canonical zone files by the mobmerge and roommerge utilities.  ZEDIT
+subcommands mutate zone reset tables directly and write .zon files on
+unlock.
 
-See also: SHOW->ZONES, ZRESET
+Permissions:
+  Zones have a list of authors and editors stored in permission.dat.
+  A GRGOD+ grants or revokes these via 'zedit <zone> grant/revoke'.
+  An author or editor may run medit/oedit/redit on any vnum within
+  their zone while the zone is CLOSED.  Only GRGOD+ may create zones
+  or open/close them.  To edit reset commands the zone must be LOCKED
+  and held by you (see HELP ZEDIT).
+
+See also: MEDIT, OEDIT, REDIT, ZEDIT, VNUM, ZRESET, SHOW -> ZONES
 #
 PAGE
 
@@ -334,6 +387,28 @@ Examples:
   > purge dragon
 
 See also: DC
+#
+REDIT
+
+Usage: redit <room vnum>
+
+Opens a menu-driven editor on the given room.  You must be an author
+or editor of the zone that contains the vnum, and the zone must be
+CLOSED.  Select a field by typing its number; enter '.' from the top
+menu to exit.
+
+Editable fields include name, description, room flags, sector type,
+the six exits (each with its own description, keywords, exit flags,
+key number, and to-room vnum), and extra descriptions.
+
+Changes are appended to world/wld/redit.wld as they are made; the
+roommerge utility folds them back into the canonical .wld files when
+run.
+
+Mob and object placement is NOT part of redit -- that is handled by
+zone reset commands.  See HELP ZEDIT.
+
+See also: OLC, MEDIT, OEDIT, ZEDIT, VNUM
 #
 RELOAD
 
@@ -715,6 +790,52 @@ Examples:
 This code was provided by Gnort.
 
 See also: NOWIZ
+#
+ZEDIT
+
+Usage: zedit <zone> <subcommand> [args]
+
+Manages zone-level state: permissions, the lock/unlock lifecycle, and
+the reset-command table that places mobs and objects into rooms.  The
+zone argument is a zone vnum (not a room vnum).
+
+Permission and lifecycle subcommands:
+  info                          View flags, authors, editors, lock state
+  create <name>                 Create a new zone              (GRGOD+)
+  open                          Open the zone to mortals       (GRGOD+)
+  close                         Close the zone to mortals      (GRGOD+)
+  grant <author|editor> <plr>   Add a player to the list       (GRGOD+)
+  revoke <author|editor> <plr>  Remove a player from the list  (GRGOD+)
+  lock                          Extract mobs/objects, hold zone
+                                at reset state, block auto-resets
+  unlock                        Save the .zon file (previous
+                                version is renamed to .bak),
+                                release the lock
+
+Reset-command subcommands (zone must be LOCKED and held by you):
+  list                          List reset commands with indices
+  remove <index>                Delete the reset command at index
+  mobile <mob vnum> <room vnum> Append M: load a mob into a room
+  object <obj vnum> <room vnum> Append O: load an object into a room
+  give   <obj vnum>             Append G: give obj to last-loaded mob
+  equip  <obj vnum> <wear pos>  Append E: equip obj on last mob at pos
+  put    <obj vnum> <container> Append P: put obj into a container
+  door   <room vnum> <dir 0-5> <state 0-2>
+                                Append D: set door state at reset time
+                                (state: 0 open, 1 closed, 2 locked)
+
+After every append the world is resynced (clean_zone + reset_zone) so
+you immediately see the new object or mob in place.  if_flag and max
+defaults are fixed per command type (M/O: 0/1, G/E/P: 1/1, D: 0); to
+override these values hand-edit the .zon after unlock.
+
+A zone must be LOCKED before its reset commands can be edited.  Lock
+extracts every mob and object in the zone and re-runs the reset list;
+auto-resets are suspended until unlock.  Only the immortal who locked
+the zone (or a GRGOD+) may unlock it.  Unlock writes the .zon file and
+releases the lock.
+
+See also: OLC, MEDIT, OEDIT, REDIT, VNUM, ZRESET, SHOW -> ZONES
 #
 ZRESET
 

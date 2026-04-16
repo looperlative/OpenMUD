@@ -27,7 +27,7 @@ $flags	= "-q";
 
 $home	= ".";
 $bin	= "$home/bin";
-$lib	= "$home/lib";
+$lib	= "$home/lib-run";
 $log	= "$home/log";
 
 chdir $home;

@@ -38,6 +38,9 @@
 #include "olc.h"
 
 extern int num_allocated_zone;
+extern int num_allocated_world;
+extern int num_allocated_mobt;
+extern int num_allocated_objt;
 extern struct player_index_element *player_table;
 extern int top_of_p_table;
 extern void clean_zone(zone_rnum zone);
@@ -77,6 +80,8 @@ const char *attack_types[] =
 static void olc_save_mobile(int vnum);
 static void olc_save_object(int vnum);
 static void olc_save_room(int vnum);
+int olc_vnum_to_zone_rnum(int vnum);
+int olc_ok_to_edit(struct char_data *ch, int vnum);
 
 static void olc_state_after_push(struct olc_editor_s *ed, int state)
 {
@@ -1457,6 +1462,98 @@ void olc_nanny(struct descriptor_data *d, char *arg)
     }
 }
 
+static int olc_create_room_proto(int vnum, int zone_rnum)
+{
+    int rnum = top_of_world + 1;
+    if (rnum >= num_allocated_world)
+	return -1;
+
+    memset(&world[rnum], 0, sizeof(world[rnum]));
+    world[rnum].number = vnum;
+    world[rnum].zone = zone_rnum;
+    world[rnum].sector_type = SECT_INSIDE;
+    world[rnum].name = strdup("An unfinished room");
+    world[rnum].description = strdup("You are in an unfinished room.\r\n");
+
+    top_of_world = rnum;
+    return 0;
+}
+
+static int olc_create_mob_proto(int vnum)
+{
+    int rnum = top_of_mobt + 1;
+    if (rnum >= num_allocated_mobt)
+	return -1;
+
+    mob_index[rnum].vnum = vnum;
+    mob_index[rnum].number = 0;
+    mob_index[rnum].func = NULL;
+
+    struct char_data *mob = &mob_proto[rnum];
+    clear_char(mob);
+    mob->player_specials = &dummy_mob;
+    mob->nr = rnum;
+
+    mob->player.name = strdup("mobile unfinished");
+    mob->player.short_descr = strdup("an unfinished mobile");
+    mob->player.long_descr = strdup("An unfinished mobile is standing here.\r\n");
+    mob->player.description = strdup("");
+
+    MOB_FLAGS(mob) = MOB_ISNPC;
+    GET_LEVEL(mob) = 1;
+    GET_AC(mob) = 100;
+    mob->mob_specials.hpnodice = 1;
+    mob->mob_specials.hpsizedice = 1;
+    mob->mob_specials.damnodice = 1;
+    mob->mob_specials.damsizedice = 1;
+    GET_POS(mob) = POS_STANDING;
+    GET_DEFAULT_POS(mob) = POS_STANDING;
+    GET_SEX(mob) = SEX_NEUTRAL;
+
+    mob->real_abils.str = 11;
+    mob->real_abils.intel = 11;
+    mob->real_abils.wis = 11;
+    mob->real_abils.dex = 11;
+    mob->real_abils.con = 11;
+    mob->real_abils.cha = 11;
+    mob->aff_abils = mob->real_abils;
+
+    top_of_mobt = rnum;
+    return 0;
+}
+
+static int olc_create_obj_proto(int vnum)
+{
+    int rnum = top_of_objt + 1;
+    if (rnum >= num_allocated_objt)
+	return -1;
+
+    obj_index[rnum].vnum = vnum;
+    obj_index[rnum].number = 0;
+    obj_index[rnum].func = NULL;
+
+    struct obj_data *obj = &obj_proto[rnum];
+    clear_object(obj);
+    obj->item_number = rnum;
+
+    obj->name = strdup("object unfinished");
+    obj->short_description = strdup("an unfinished object");
+    obj->description = strdup("An unfinished object is lying here.");
+    obj->action_description = strdup("");
+
+    GET_OBJ_TYPE(obj) = ITEM_OTHER;
+    GET_OBJ_WEAR(obj) = ITEM_WEAR_TAKE;
+    GET_OBJ_WEIGHT(obj) = 1;
+
+    for (int j = 0; j < MAX_OBJ_AFFECT; j++) {
+	obj->affected[j].location = APPLY_NONE;
+	obj->affected[j].modifier = 0;
+    }
+
+    top_of_objt = rnum;
+    return 0;
+}
+
 void do_redit(struct char_data *ch, char *argument, int cmd, int subcmd)
 {
     skip_spaces(&argument);
@@ -1468,10 +1565,11 @@ void do_redit(struct char_data *ch, char *argument, int cmd, int subcmd)
     }
 
     int room_vnum = atoi(argument);
-    int room_rnum = real_room(room_vnum);
-    if (room_rnum == NOWHERE)
+
+    int zone_rnum = olc_vnum_to_zone_rnum(room_vnum);
+    if (zone_rnum == NOWHERE)
     {
-	send_to_char(ch, "Room %d doesn't exist.\r\n", room_vnum);
+	send_to_char(ch, "Room %d is not within any zone.\r\n", room_vnum);
 	return;
     }
 
@@ -1479,6 +1577,17 @@ void do_redit(struct char_data *ch, char *argument, int cmd, int subcmd)
     {
 	send_to_char(ch, "You don't have permission to edit that zone.\r\n");
 	return;
+    }
+
+    int room_rnum = real_room(room_vnum);
+    if (room_rnum == NOWHERE)
+    {
+	if (olc_create_room_proto(room_vnum, zone_rnum) < 0)
+	{
+	    send_to_char(ch, "No more room slots available.  Reboot to get more rooms.\r\n");
+	    return;
+	}
+	send_to_char(ch, "Creating new room %d.\r\n", room_vnum);
     }
 
     olc_create_editor(ch);
@@ -1506,10 +1615,10 @@ void do_medit(struct char_data *ch, char *argument, int cmd, int subcmd)
     }
 
     int vnum = atoi(argument);
-    int rnum = real_mobile(vnum);
-    if (rnum == NOBODY)
+
+    if (olc_vnum_to_zone_rnum(vnum) == NOWHERE)
     {
-	send_to_char(ch, "Mobile %d doesn't exist.\r\n", vnum);
+	send_to_char(ch, "Mobile %d is not within any zone.\r\n", vnum);
 	return;
     }
 
@@ -1517,6 +1626,17 @@ void do_medit(struct char_data *ch, char *argument, int cmd, int subcmd)
     {
 	send_to_char(ch, "You don't have permission to edit that zone.\r\n");
 	return;
+    }
+
+    int rnum = real_mobile(vnum);
+    if (rnum == NOBODY)
+    {
+	if (olc_create_mob_proto(vnum) < 0)
+	{
+	    send_to_char(ch, "No more mobile slots available.  Reboot to get more mobiles.\r\n");
+	    return;
+	}
+	send_to_char(ch, "Creating new mobile %d.\r\n", vnum);
     }
 
     olc_create_editor(ch);
@@ -1544,10 +1664,10 @@ void do_oedit(struct char_data *ch, char *argument, int cmd, int subcmd)
     }
 
     int vnum = atoi(argument);
-    int rnum = real_object(vnum);
-    if (rnum == NOBODY)
+
+    if (olc_vnum_to_zone_rnum(vnum) == NOWHERE)
     {
-	send_to_char(ch, "Object %d doesn't exist.\r\n", vnum);
+	send_to_char(ch, "Object %d is not within any zone.\r\n", vnum);
 	return;
     }
 
@@ -1555,6 +1675,17 @@ void do_oedit(struct char_data *ch, char *argument, int cmd, int subcmd)
     {
 	send_to_char(ch, "You don't have permission to edit that zone.\r\n");
 	return;
+    }
+
+    int rnum = real_object(vnum);
+    if (rnum == NOTHING)
+    {
+	if (olc_create_obj_proto(vnum) < 0)
+	{
+	    send_to_char(ch, "No more object slots available.  Reboot to get more objects.\r\n");
+	    return;
+	}
+	send_to_char(ch, "Creating new object %d.\r\n", vnum);
     }
 
     olc_create_editor(ch);

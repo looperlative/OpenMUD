@@ -901,7 +901,7 @@ void index_boot(int mode)
     break;
   case DB_BOOT_MOB:
     CREATE(mob_proto, struct char_data, rec_count * 2);
-    CREATE(mob_index, struct index_data, rec_count);
+    CREATE(mob_index, struct index_data, rec_count * 2);
     size[0] = sizeof(struct index_data) * rec_count;
     size[1] = sizeof(struct char_data) * rec_count;
     log("   %d mobs, %d bytes in index, %d bytes in prototypes.", rec_count, size[0], size[1]);
@@ -909,7 +909,7 @@ void index_boot(int mode)
     break;
   case DB_BOOT_OBJ:
     CREATE(obj_proto, struct obj_data, rec_count * 2);
-    CREATE(obj_index, struct index_data, rec_count);
+    CREATE(obj_index, struct index_data, rec_count * 2);
     size[0] = sizeof(struct index_data) * rec_count;
     size[1] = sizeof(struct obj_data) * rec_count;
     log("   %d objs, %d bytes in index, %d bytes in prototypes.", rec_count, size[0], size[1]);
