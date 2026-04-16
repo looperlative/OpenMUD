@@ -88,9 +88,8 @@ void read_file(void)
     perror("Error opening playerfile");
     exit(1);
   }
-  while (!feof(fl)) {
-    fread(&player, sizeof(struct char_file_u), 1, fl);
-    if (!feof(fl) && player.level >= MIN_LEVEL &&
+  while (fread(&player, sizeof(struct char_file_u), 1, fl) == 1) {
+    if (player.level >= MIN_LEVEL &&
 	!(IS_SET(player.char_specials_saved.act, PLR_FROZEN)) &&
 	!(IS_SET(player.char_specials_saved.act, PLR_NOWIZLIST)) &&
 	!(IS_SET(player.char_specials_saved.act, PLR_DELETED)))

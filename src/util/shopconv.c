@@ -8,6 +8,8 @@
 #include "utils.h"
 #include "shop.h"
 
+#pragma GCC diagnostic ignored "-Wunused-result"
+
 void basic_mud_log(const char *x, ...)
 {
   puts(x);
@@ -150,7 +152,7 @@ int boot_the_shops(FILE * shop_f, FILE * newshop_f, char *filename)
 int main(int argc, char *argv[])
 {
   FILE *sfp, *nsfp;
-  char fn[256], part[256];
+  char fn[256], part[768];
   int result, index;
 
   if (argc < 2) {
@@ -177,10 +179,10 @@ int main(int argc, char *argv[])
       fclose(sfp);
       if (result) {
 	sprintf(part, "mv %s.tmp %s", fn, fn);
-	system(part);
+	(void)system(part);
       } else {
 	sprintf(part, "mv %s.tmp %s.bak", fn, fn);
-	system(part);
+	(void)system(part);
 	printf("Done!\n");
       }
     }
