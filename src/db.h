@@ -105,6 +105,7 @@ void	destroy_db(void);
 int	create_entry(char *name);
 void	zone_update(void);
 char	*fread_string(FILE *fl, const char *error);
+long	get_ptable_by_name(const char *name);
 long	get_id_by_name(const char *name);
 char	*get_name_by_id(long id);
 void	save_mud_time(struct time_info_data *when);

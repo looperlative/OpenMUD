@@ -38,6 +38,10 @@
 #include "olc.h"
 
 extern int num_allocated_zone;
+extern struct player_index_element *player_table;
+extern int top_of_p_table;
+extern void clean_zone(zone_rnum zone);
+extern void reset_zone(zone_rnum zone);
 
 static struct olc_editor_s olc_editors[MAX_EDITORS];
 static struct olc_garbage_s *olc_mob_garbage = NULL;
@@ -1761,6 +1765,69 @@ static void olc_save_room(int vnum)
  * GRANT <author/editor> <player>
  * REVOKE <author/editor> <player>
  */
+static int zedit_save_zone_file(int rnum)
+{
+    struct zone_data *z = &zone_table[rnum];
+    char path[256], bakpath[256];
+
+    snprintf(path, sizeof(path), "world/zon/%d.zon", z->number);
+    snprintf(bakpath, sizeof(bakpath), "world/zon/%d.zon.bak", z->number);
+
+    /* Rename existing file to backup; missing is fine for brand-new zones. */
+    rename(path, bakpath);
+
+    FILE *fp = fopen(path, "w");
+    if (fp == NULL)
+    {
+	log("SYSERR: zedit_save_zone_file: cannot open %s for writing", path);
+	return -1;
+    }
+
+    fprintf(fp, "#%d\n%s~\n%d %d %d %d\n",
+	    z->number, z->name, z->bot, z->top, z->lifespan, z->reset_mode);
+
+    for (int i = 0; z->cmd[i].command != 'S'; i++)
+    {
+	struct reset_com *c = &z->cmd[i];
+	if (strchr("MOEPD", c->command) == NULL)
+	    fprintf(fp, "%c %d %d %d\n",
+		    c->command, c->if_flag, c->arg1, c->arg2);
+	else
+	    fprintf(fp, "%c %d %d %d %d\n",
+		    c->command, c->if_flag, c->arg1, c->arg2, c->arg3);
+    }
+
+    fprintf(fp, "S\n$\n");
+    fclose(fp);
+    return 0;
+}
+
+static int olc_is_zone_author(struct char_data *ch, int rnum)
+{
+    if (!IS_NPC(ch) && GET_LEVEL(ch) >= LVL_GRGOD)
+	return 1;
+
+    struct olc_permissions_s *perm = &zone_table[rnum].permissions;
+    for (int i = 0; i < OLC_ZONE_MAX_AUTHORS; i++)
+	if (perm->authors[i] == GET_PFILEPOS(ch))
+	    return 1;
+
+    return 0;
+}
+
+static int olc_is_zone_author_or_editor(struct char_data *ch, int rnum)
+{
+    if (olc_is_zone_author(ch, rnum))
+	return 1;
+
+    struct olc_permissions_s *perm = &zone_table[rnum].permissions;
+    for (int i = 0; i < OLC_ZONE_MAX_AUTHORS; i++)
+	if (perm->editors[i] == GET_PFILEPOS(ch))
+	    return 1;
+
+    return 0;
+}
+
 void zedit_create(struct char_data *ch, int zone_num, char *argument)
 {
     int rnum = top_of_zone_table + 1;
@@ -1788,6 +1855,132 @@ void zedit_create(struct char_data *ch, int zone_num, char *argument)
     olc_save_permissions(zone_num);
 }
 
+static void zedit_info(struct char_data *ch, int rnum)
+{
+    struct zone_data *z = &zone_table[rnum];
+    struct olc_permissions_s *perm = &z->permissions;
+    char flagbuf[128];
+
+    if (perm->flags)
+	sprintbit(perm->flags, olc_zone_flags, flagbuf, sizeof(flagbuf));
+    else
+	strcpy(flagbuf, "NONE");
+
+    send_to_char(ch, "Zone %d: %s\r\n", z->number, z->name);
+    send_to_char(ch, "Range: %d-%d  Flags: %s\r\n", z->bot, z->top, flagbuf);
+
+    if (perm->lock_holder > 0 && perm->lock_holder <= top_of_p_table)
+	send_to_char(ch, "Locked by: %s\r\n", player_table[perm->lock_holder].name);
+
+    send_to_char(ch, "Authors:");
+    for (int i = 0; i < OLC_ZONE_MAX_AUTHORS; i++)
+	if (perm->authors[i] > 0 && perm->authors[i] <= top_of_p_table)
+	    send_to_char(ch, " %s", player_table[perm->authors[i]].name);
+    send_to_char(ch, "\r\n");
+
+    send_to_char(ch, "Editors:");
+    for (int i = 0; i < OLC_ZONE_MAX_AUTHORS; i++)
+	if (perm->editors[i] > 0 && perm->editors[i] <= top_of_p_table)
+	    send_to_char(ch, " %s", player_table[perm->editors[i]].name);
+    send_to_char(ch, "\r\n");
+}
+
+static void zedit_grant_revoke(struct char_data *ch, int rnum, int zone,
+			       int is_grant, char *args)
+{
+    char *role = NULL;
+    char *name = NULL;
+
+    if (sscanf(args, "%ms %ms", &role, &name) < 2)
+    {
+	send_to_char(ch, "Usage: zedit <zone> %s author|editor <player>\r\n",
+		     is_grant ? "grant" : "revoke");
+	free(role);
+	free(name);
+	return;
+    }
+
+    int is_author;
+    if (strncmp("author", role, strlen(role)) == 0)
+	is_author = 1;
+    else if (strncmp("editor", role, strlen(role)) == 0)
+	is_author = 0;
+    else
+    {
+	send_to_char(ch, "Must specify 'author' or 'editor'.\r\n");
+	free(role);
+	free(name);
+	return;
+    }
+
+    long ptidx = get_ptable_by_name(name);
+    if (ptidx < 0)
+    {
+	send_to_char(ch, "No player named '%s'.\r\n", name);
+	free(role);
+	free(name);
+	return;
+    }
+
+    struct olc_permissions_s *perm = &zone_table[rnum].permissions;
+    int *list = is_author ? perm->authors : perm->editors;
+
+    if (is_grant)
+    {
+	for (int i = 0; i < OLC_ZONE_MAX_AUTHORS; i++)
+	{
+	    if (list[i] == ptidx)
+	    {
+		send_to_char(ch, "%s is already %s %s of zone %d.\r\n",
+			     name, (is_author ? "an" : "an"), role, zone);
+		free(role);
+		free(name);
+		return;
+	    }
+	}
+
+	for (int i = 0; i < OLC_ZONE_MAX_AUTHORS; i++)
+	{
+	    if (list[i] == 0)
+	    {
+		list[i] = ptidx;
+		olc_save_permissions(zone);
+		send_to_char(ch, "%s granted %s on zone %d.\r\n", name, role, zone);
+		mudlog(NRM, GET_LEVEL(ch), TRUE, "%s granted %s %s on zone %d",
+		       GET_NAME(ch), name, role, zone);
+		free(role);
+		free(name);
+		return;
+	    }
+	}
+
+	send_to_char(ch, "No empty %s slots on zone %d.\r\n", role, zone);
+    }
+    else
+    {
+	for (int i = 0; i < OLC_ZONE_MAX_AUTHORS; i++)
+	{
+	    if (list[i] == ptidx)
+	    {
+		list[i] = 0;
+		olc_save_permissions(zone);
+		send_to_char(ch, "%s revoked as %s on zone %d.\r\n", name, role, zone);
+		mudlog(NRM, GET_LEVEL(ch), TRUE, "%s revoked %s %s on zone %d",
+		       GET_NAME(ch), name, role, zone);
+		free(role);
+		free(name);
+		return;
+	    }
+	}
+
+	send_to_char(ch, "%s is not %s %s of zone %d.\r\n",
+		     name, (is_author ? "an" : "an"), role, zone);
+    }
+
+    free(role);
+    free(name);
+}
+
 void do_zedit(struct char_data *ch, char *argument, int cmd, int subcmd)
 {
     int zone;
@@ -1797,28 +1990,153 @@ void do_zedit(struct char_data *ch, char *argument, int cmd, int subcmd)
     int nfields = sscanf(argument, "%d %ms %n", &zone, &s1, &nconsumed);
     if (nfields < 2)
     {
-	send_to_char(ch, "ZEDIT <zone> <command> ...\r\n");
+	send_to_char(ch, "ZEDIT <zone> <command> ...\r\n"
+		     "Commands: info, open, close, lock, unlock, grant, revoke, create\r\n");
 	return;
     }
 
     int rnum = real_zone(zone);
+
     if (strncmp("create", s1, strlen(s1)) == 0)
     {
-	if (rnum != NOWHERE)
+	if (GET_LEVEL(ch) < LVL_GRGOD)
 	{
-	    send_to_char(ch, "Zone %d already exists\r\n", zone);
+	    send_to_char(ch, "Only great gods can create zones.\r\n");
+	    free(s1);
 	    return;
 	}
-
+	if (rnum != NOWHERE)
+	{
+	    send_to_char(ch, "Zone %d already exists.\r\n", zone);
+	    free(s1);
+	    return;
+	}
 	zedit_create(ch, zone, argument + nconsumed);
+	free(s1);
 	return;
     }
 
     if (rnum == NOWHERE)
     {
-	send_to_char(ch, "Zone %d doesn't exist\r\n", zone);
+	send_to_char(ch, "Zone %d doesn't exist.\r\n", zone);
+	free(s1);
 	return;
     }
+
+    if (strncmp("info", s1, strlen(s1)) == 0)
+    {
+	if (!olc_is_zone_author_or_editor(ch, rnum))
+	{
+	    send_to_char(ch, "You don't have permission to view that zone.\r\n");
+	    free(s1);
+	    return;
+	}
+	zedit_info(ch, rnum);
+    }
+    else if (strncmp("close", s1, strlen(s1)) == 0)
+    {
+	if (GET_LEVEL(ch) < LVL_GRGOD)
+	{
+	    send_to_char(ch, "Only great gods can close a zone.\r\n");
+	    free(s1);
+	    return;
+	}
+	SET_BIT(zone_table[rnum].permissions.flags, OLC_ZONEFLAGS_CLOSED);
+	olc_save_permissions(zone);
+	send_to_char(ch, "Zone %d closed.\r\n", zone);
+	mudlog(NRM, GET_LEVEL(ch), TRUE, "%s closed zone %d", GET_NAME(ch), zone);
+    }
+    else if (strncmp("open", s1, strlen(s1)) == 0)
+    {
+	if (GET_LEVEL(ch) < LVL_GRGOD)
+	{
+	    send_to_char(ch, "Only great gods can open a zone.\r\n");
+	    free(s1);
+	    return;
+	}
+	REMOVE_BIT(zone_table[rnum].permissions.flags, OLC_ZONEFLAGS_CLOSED);
+	olc_save_permissions(zone);
+	send_to_char(ch, "Zone %d opened.\r\n", zone);
+	mudlog(NRM, GET_LEVEL(ch), TRUE, "%s opened zone %d", GET_NAME(ch), zone);
+    }
+    else if (strncmp("lock", s1, strlen(s1)) == 0)
+    {
+	if (!olc_is_zone_author_or_editor(ch, rnum))
+	{
+	    send_to_char(ch, "You don't have permission to lock that zone.\r\n");
+	    free(s1);
+	    return;
+	}
+	if (zone_table[rnum].permissions.flags & OLC_ZONEFLAGS_LOCKED)
+	{
+	    send_to_char(ch, "Zone %d is already locked.\r\n", zone);
+	    free(s1);
+	    return;
+	}
+	clean_zone(rnum);
+	reset_zone(rnum);
+	SET_BIT(zone_table[rnum].permissions.flags, OLC_ZONEFLAGS_LOCKED);
+	zone_table[rnum].permissions.lock_holder = GET_PFILEPOS(ch);
+	olc_save_permissions(zone);
+	send_to_char(ch, "Zone %d reset and locked for editing.\r\n", zone);
+	mudlog(NRM, GET_LEVEL(ch), TRUE, "%s locked zone %d", GET_NAME(ch), zone);
+    }
+    else if (strncmp("unlock", s1, strlen(s1)) == 0)
+    {
+	struct olc_permissions_s *perm = &zone_table[rnum].permissions;
+	if (!(perm->flags & OLC_ZONEFLAGS_LOCKED))
+	{
+	    send_to_char(ch, "Zone %d is not locked.\r\n", zone);
+	    free(s1);
+	    return;
+	}
+	if (GET_LEVEL(ch) < LVL_GRGOD && perm->lock_holder != GET_PFILEPOS(ch))
+	{
+	    char *holder = (perm->lock_holder > 0 && perm->lock_holder <= top_of_p_table)
+			   ? player_table[perm->lock_holder].name : "the lock holder";
+	    send_to_char(ch, "Only %s or a great god can unlock this zone.\r\n", holder);
+	    free(s1);
+	    return;
+	}
+	if (zedit_save_zone_file(rnum) != 0)
+	{
+	    send_to_char(ch, "Failed to save zone %d; zone remains locked.\r\n", zone);
+	    free(s1);
+	    return;
+	}
+	REMOVE_BIT(perm->flags, OLC_ZONEFLAGS_LOCKED);
+	perm->lock_holder = 0;
+	olc_save_permissions(zone);
+	send_to_char(ch, "Zone %d saved and unlocked.\r\n", zone);
+	mudlog(NRM, GET_LEVEL(ch), TRUE, "%s unlocked zone %d", GET_NAME(ch), zone);
+    }
+    else if (strncmp("grant", s1, strlen(s1)) == 0)
+    {
+	if (GET_LEVEL(ch) < LVL_GRGOD)
+	{
+	    send_to_char(ch, "Only great gods can grant permissions.\r\n");
+	    free(s1);
+	    return;
+	}
+	zedit_grant_revoke(ch, rnum, zone, 1, argument + nconsumed);
+    }
+    else if (strncmp("revoke", s1, strlen(s1)) == 0)
+    {
+	if (GET_LEVEL(ch) < LVL_GRGOD)
+	{
+	    send_to_char(ch, "Only great gods can revoke permissions.\r\n");
+	    free(s1);
+	    return;
+	}
+	zedit_grant_revoke(ch, rnum, zone, 0, argument + nconsumed);
+    }
+    else
+    {
+	send_to_char(ch, "Unknown zedit command '%s'.\r\n"
+		     "Commands: info, open, close, lock, unlock, grant, revoke, create\r\n", s1);
+    }
+
+    free(s1);
 }
 
 int olc_vnum_to_zone_rnum(int vnum)
