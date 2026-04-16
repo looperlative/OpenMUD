@@ -2,7 +2,7 @@
 
 ## Context
 
-An in-MUD online area-editing system (OLC) covers mobiles, objects, rooms, and zones, backed by a permission system (`permission.dat`) that gates editing by zone author/editor assignments. Three of four editors are substantially functional; zone editing — which ties mobs and objects into rooms at reset time — now has permission management commands but still lacks zone reset-command editing.
+An in-MUD online area-editing system (OLC) covers mobiles, objects, rooms, and zones, backed by a permission system (`permission.dat`) that gates editing by zone author/editor assignments. All four editors are now functional for day-to-day area building; zedit can place mobs/objects into rooms and edit doors via reset-command editing.
 
 All editor logic lives in `src/olc.c` with headers in `src/olc.h`. The generic state machine (`olc_nanny`) handles text edit, toggle-bit, type-select, numeric, extra-desc, and exit-edit states, with a two-slot state stack for nested sub-editors. Merged output is appended to editor-specific files (`medit.mob`, `oedit.obj`, `redit.wld`) and later reconciled by the existing `mobmerge` / `roommerge` tools.
 
@@ -20,8 +20,8 @@ Aliases, descriptions, type, wear/extra flags, weight/cost/rent, type-specific v
 Name, desc, flags, sector, six exits with key/lock data, extra descs. Save writes `redit.wld`. Permissions enforced via `olc_ok_to_edit()`.
 **Missing:** nothing structural — mob/object placement is properly the zedit's job.
 
-### ZEDIT — ~55% complete
-Zone permission management and the lock/unlock lifecycle are functional. The following subcommands are implemented:
+### ZEDIT — ~90% complete
+Zone permission management, the lock/unlock lifecycle, and reset-command editing are all functional. Subcommands:
 
 | Command | Permission | Description |
 |---------|-----------|-------------|
@@ -33,12 +33,22 @@ Zone permission management and the lock/unlock lifecycle are functional. The fol
 | `zedit <zone> unlock` | Lock holder or GRGOD+ | Save `.zon` (with `.bak`), release lock |
 | `zedit <zone> grant author\|editor <player>` | GRGOD+ | Add player to author/editor list |
 | `zedit <zone> revoke author\|editor <player>` | GRGOD+ | Remove player from author/editor list |
+| `zedit <zone> list` | Author/Editor | List reset commands with human-readable descriptions |
+| `zedit <zone> mobile <mob vnum> <room vnum>` | Lock holder (LOCKED) | Append `M` reset command |
+| `zedit <zone> object <obj vnum> <room vnum>` | Lock holder (LOCKED) | Append `O` reset command |
+| `zedit <zone> give <obj vnum>` | Lock holder (LOCKED) | Append `G` reset command (attaches to most recent M) |
+| `zedit <zone> equip <obj vnum> <wear pos>` | Lock holder (LOCKED) | Append `E` reset command |
+| `zedit <zone> put <obj vnum> <container vnum>` | Lock holder (LOCKED) | Append `P` reset command |
+| `zedit <zone> door <room vnum> <dir 0-5> <state 0-2>` | Lock holder (LOCKED) | Append `D` reset command |
+| `zedit <zone> remove <index>` | Lock holder (LOCKED) | Delete reset command at index |
 
 **Lock semantics:** `lock` calls `clean_zone()` to extract all mobs/objects, then `reset_zone()` to spawn everything fresh from the reset command table. The auto-reset loop (`zone_update`, `db.c:2089`) already skips zones with nonzero `permissions.flags`, so LOCKED inherently blocks automatic resets.
 
-**Unlock semantics:** `unlock` writes `lib-run/world/zon/<vnum>.zon` (renaming any existing file to `<vnum>.zon.bak` first) from in-memory `zone_table[rnum]` before releasing the lock. Only the player who locked the zone (or a grgod) may unlock it.
+**Unlock semantics:** `unlock` writes `lib-run/world/zon/<vnum>.zon` (renaming any existing file to `<vnum>.zon.bak` first) from in-memory `zone_table[rnum]` before releasing the lock. Only the player who locked the zone (or a grgod) may unlock it. Save converts rnums back to vnums per command type so the file round-trips correctly.
 
-**Still missing:** zone reset-command editing (mobile/object/give/equip/put/door placement), zone reset-command list/remove display. These will require a LOCKED zone to mutate.
+**Reset-command semantics:** Each successful mutation re-syncs the world (`clean_zone` + `reset_zone`) so the builder sees the effect immediately. `if_flag` and `max` defaults are fixed per command type (M/O: 0/1; G/E/P: 1/1; D: 0). Wear position, direction, and door state are validated against `NUM_WEARS` / `NUM_OF_DIRS` / `[0,2]`.
+
+**Still missing:** insert-at-index (workaround: remove + re-add in order), PURGE (no runtime support), if-flag/max override (hand-edit `.zon` if needed), quest/trigger integration.
 
 ## Permission Model
 
@@ -59,23 +69,15 @@ Zone permission management and the lock/unlock lifecycle are functional. The fol
 
 ## Work Remaining (priority order)
 
-### 1. Zone reset-command editing
-Functions to append, insert, delete, and list `reset_com` entries. All must require the zone to be LOCKED before mutating `cmd[]`:
-- `zedit_add_mobile(zone, vnum, max, room)` → `'M'` cmd
-- `zedit_add_object(zone, vnum, max, room)` → `'O'`
-- `zedit_give(zone, vnum, max)` → `'G'` (attaches to last-loaded mob)
-- `zedit_equip(zone, vnum, max, pos)` → `'E'`
-- `zedit_put(zone, vnum, max, container)` → `'P'`
-- `zedit_door(zone, room, dir, state)` → `'D'`
-- `zedit_remove(zone, index)` / `zedit_list(zone)`
-Grow `cmd[]` with `RECREATE`; keep trailing `'S'` sentinel intact.
-
-### 2. Small gaps in existing editors
+### 1. Small gaps in existing editors
 - Medit: extra-description state (reuse REDIT's extra-desc handler), special-proc field.
 - Oedit: quest flag, spell-charge validation.
 
+### 2. Zedit polish
+- Insert-at-index (`zedit <zone> insert <after-index> ...`) — currently only append + remove.
+- If-flag / max override for reset commands — currently fixed per command type.
+
 ### 3. Quality-of-life
-- `zedit <zone> list` — dump reset commands with indices.
 - In-progress edit recovery: periodic snapshot of the active `olc_data` to a scratch file keyed on player id, restored on reconnect.
 
 ## Critical Files

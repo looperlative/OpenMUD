@@ -1789,12 +1789,37 @@ static int zedit_save_zone_file(int rnum)
     for (int i = 0; z->cmd[i].command != 'S'; i++)
     {
 	struct reset_com *c = &z->cmd[i];
+	int a1 = c->arg1, a2 = c->arg2, a3 = c->arg3;
+
+	switch (c->command)
+	{
+	case 'M':
+	    a1 = mob_index[c->arg1].vnum;
+	    a3 = world[c->arg3].number;
+	    break;
+	case 'O':
+	    a1 = obj_index[c->arg1].vnum;
+	    a3 = (c->arg3 == NOWHERE) ? -1 : world[c->arg3].number;
+	    break;
+	case 'G':
+	case 'E':
+	    a1 = obj_index[c->arg1].vnum;
+	    break;
+	case 'P':
+	    a1 = obj_index[c->arg1].vnum;
+	    a3 = obj_index[c->arg3].vnum;
+	    break;
+	case 'D':
+	    a1 = world[c->arg1].number;
+	    break;
+	case '*':
+	    continue;
+	}
+
 	if (strchr("MOEPD", c->command) == NULL)
-	    fprintf(fp, "%c %d %d %d\n",
-		    c->command, c->if_flag, c->arg1, c->arg2);
+	    fprintf(fp, "%c %d %d %d\n", c->command, c->if_flag, a1, a2);
 	else
-	    fprintf(fp, "%c %d %d %d %d\n",
-		    c->command, c->if_flag, c->arg1, c->arg2, c->arg3);
+	    fprintf(fp, "%c %d %d %d %d\n", c->command, c->if_flag, a1, a2, a3);
     }
 
     fprintf(fp, "S\n$\n");
@@ -1981,6 +2006,370 @@ static void zedit_grant_revoke(struct char_data *ch, int rnum, int zone,
     free(name);
 }
 
+static const char *door_state_names[] = { "open", "closed", "locked" };
+
+static int zedit_cmd_count(int rnum)
+{
+    int i = 0;
+    while (zone_table[rnum].cmd[i].command != 'S')
+	i++;
+    return i + 1;
+}
+
+static int zedit_append_cmd(int rnum, char command, int if_flag,
+			    int arg1, int arg2, int arg3)
+{
+    struct zone_data *z = &zone_table[rnum];
+    int count = zedit_cmd_count(rnum);
+    int idx = count - 1;
+
+    RECREATE(z->cmd, struct reset_com, count + 1);
+    z->cmd[count] = z->cmd[idx];
+
+    z->cmd[idx].command = command;
+    z->cmd[idx].if_flag = if_flag;
+    z->cmd[idx].arg1 = arg1;
+    z->cmd[idx].arg2 = arg2;
+    z->cmd[idx].arg3 = arg3;
+    z->cmd[idx].line = 0;
+    z->cmd[idx].created_blob_exists = 0;
+    z->cmd[idx].mob = NULL;
+    z->cmd[idx].obj = NULL;
+
+    return idx;
+}
+
+static int zedit_require_lock(struct char_data *ch, int rnum)
+{
+    struct olc_permissions_s *perm = &zone_table[rnum].permissions;
+
+    if (!(perm->flags & OLC_ZONEFLAGS_LOCKED))
+    {
+	send_to_char(ch, "Zone must be locked before editing reset commands.\r\n");
+	return 0;
+    }
+    if (GET_LEVEL(ch) < LVL_GRGOD && perm->lock_holder != GET_PFILEPOS(ch))
+    {
+	char *holder = (perm->lock_holder > 0 && perm->lock_holder <= top_of_p_table)
+		       ? player_table[perm->lock_holder].name : "the lock holder";
+	send_to_char(ch, "Only %s or a great god can edit this zone.\r\n", holder);
+	return 0;
+    }
+    return 1;
+}
+
+static int zedit_find_last_cmd(int rnum, char command)
+{
+    int last = -1;
+    for (int i = 0; zone_table[rnum].cmd[i].command != 'S'; i++)
+	if (zone_table[rnum].cmd[i].command == command)
+	    last = i;
+    return last;
+}
+
+static void zedit_resync_world(int rnum)
+{
+    clean_zone(rnum);
+    reset_zone(rnum);
+}
+
+static void zedit_add_mobile(struct char_data *ch, int rnum, int zone, char *args)
+{
+    int mob_vnum, room_vnum;
+
+    if (sscanf(args, " %d %d", &mob_vnum, &room_vnum) != 2)
+    {
+	send_to_char(ch, "Usage: zedit <zone> mobile <mob vnum> <room vnum>\r\n");
+	return;
+    }
+
+    mob_rnum mrnum = real_mobile(mob_vnum);
+    if (mrnum == NOBODY)
+    {
+	send_to_char(ch, "Mob %d doesn't exist.\r\n", mob_vnum);
+	return;
+    }
+    room_rnum rrnum = real_room(room_vnum);
+    if (rrnum == NOWHERE)
+    {
+	send_to_char(ch, "Room %d doesn't exist.\r\n", room_vnum);
+	return;
+    }
+
+    int idx = zedit_append_cmd(rnum, 'M', 0, mrnum, 1, rrnum);
+    zedit_resync_world(rnum);
+    send_to_char(ch, "Added [%d] M: load %s in %s.\r\n", idx,
+		 mob_proto[mrnum].player.short_descr,
+		 world[rrnum].name);
+    mudlog(NRM, GET_LEVEL(ch), TRUE, "%s added mobile %d to zone %d at room %d",
+	   GET_NAME(ch), mob_vnum, zone, room_vnum);
+}
+
+static void zedit_add_object(struct char_data *ch, int rnum, int zone, char *args)
+{
+    int obj_vnum, room_vnum;
+
+    if (sscanf(args, " %d %d", &obj_vnum, &room_vnum) != 2)
+    {
+	send_to_char(ch, "Usage: zedit <zone> object <obj vnum> <room vnum>\r\n");
+	return;
+    }
+
+    obj_rnum ornum = real_object(obj_vnum);
+    if (ornum == NOTHING)
+    {
+	send_to_char(ch, "Object %d doesn't exist.\r\n", obj_vnum);
+	return;
+    }
+    room_rnum rrnum = real_room(room_vnum);
+    if (rrnum == NOWHERE)
+    {
+	send_to_char(ch, "Room %d doesn't exist.\r\n", room_vnum);
+	return;
+    }
+
+    int idx = zedit_append_cmd(rnum, 'O', 0, ornum, 1, rrnum);
+    zedit_resync_world(rnum);
+    send_to_char(ch, "Added [%d] O: load %s in %s.\r\n", idx,
+		 obj_proto[ornum].short_description,
+		 world[rrnum].name);
+    mudlog(NRM, GET_LEVEL(ch), TRUE, "%s added object %d to zone %d in room %d",
+	   GET_NAME(ch), obj_vnum, zone, room_vnum);
+}
+
+static void zedit_give(struct char_data *ch, int rnum, int zone, char *args)
+{
+    int obj_vnum;
+
+    if (sscanf(args, " %d", &obj_vnum) != 1)
+    {
+	send_to_char(ch, "Usage: zedit <zone> give <obj vnum>\r\n");
+	return;
+    }
+
+    obj_rnum ornum = real_object(obj_vnum);
+    if (ornum == NOTHING)
+    {
+	send_to_char(ch, "Object %d doesn't exist.\r\n", obj_vnum);
+	return;
+    }
+    if (zedit_find_last_cmd(rnum, 'M') == -1)
+	send_to_char(ch, "Warning: no prior 'M' command; 'G' will be skipped at reset time.\r\n");
+
+    int idx = zedit_append_cmd(rnum, 'G', 1, ornum, 1, 0);
+    zedit_resync_world(rnum);
+    send_to_char(ch, "Added [%d] G: give %s.\r\n", idx,
+		 obj_proto[ornum].short_description);
+    mudlog(NRM, GET_LEVEL(ch), TRUE, "%s added give %d to zone %d",
+	   GET_NAME(ch), obj_vnum, zone);
+}
+
+static void zedit_equip(struct char_data *ch, int rnum, int zone, char *args)
+{
+    int obj_vnum, pos;
+
+    if (sscanf(args, " %d %d", &obj_vnum, &pos) != 2)
+    {
+	send_to_char(ch, "Usage: zedit <zone> equip <obj vnum> <wear pos 0-%d>\r\n",
+		     NUM_WEARS - 1);
+	return;
+    }
+
+    obj_rnum ornum = real_object(obj_vnum);
+    if (ornum == NOTHING)
+    {
+	send_to_char(ch, "Object %d doesn't exist.\r\n", obj_vnum);
+	return;
+    }
+    if (pos < 0 || pos >= NUM_WEARS)
+    {
+	send_to_char(ch, "Wear position must be 0 to %d.\r\n", NUM_WEARS - 1);
+	return;
+    }
+    if (zedit_find_last_cmd(rnum, 'M') == -1)
+	send_to_char(ch, "Warning: no prior 'M' command; 'E' will be skipped at reset time.\r\n");
+
+    int idx = zedit_append_cmd(rnum, 'E', 1, ornum, 1, pos);
+    zedit_resync_world(rnum);
+    send_to_char(ch, "Added [%d] E: equip %s on %s.\r\n", idx,
+		 obj_proto[ornum].short_description,
+		 equipment_types[pos]);
+    mudlog(NRM, GET_LEVEL(ch), TRUE, "%s added equip %d (pos %d) to zone %d",
+	   GET_NAME(ch), obj_vnum, pos, zone);
+}
+
+static void zedit_put(struct char_data *ch, int rnum, int zone, char *args)
+{
+    int obj_vnum, container_vnum;
+
+    if (sscanf(args, " %d %d", &obj_vnum, &container_vnum) != 2)
+    {
+	send_to_char(ch, "Usage: zedit <zone> put <obj vnum> <container vnum>\r\n");
+	return;
+    }
+
+    obj_rnum ornum = real_object(obj_vnum);
+    if (ornum == NOTHING)
+    {
+	send_to_char(ch, "Object %d doesn't exist.\r\n", obj_vnum);
+	return;
+    }
+    obj_rnum crnum = real_object(container_vnum);
+    if (crnum == NOTHING)
+    {
+	send_to_char(ch, "Container %d doesn't exist.\r\n", container_vnum);
+	return;
+    }
+    if (zedit_find_last_cmd(rnum, 'O') == -1 && zedit_find_last_cmd(rnum, 'P') == -1)
+	send_to_char(ch, "Warning: no prior 'O' or 'P' command; 'P' will be skipped at reset time.\r\n");
+
+    int idx = zedit_append_cmd(rnum, 'P', 1, ornum, 1, crnum);
+    zedit_resync_world(rnum);
+    send_to_char(ch, "Added [%d] P: put %s in %s.\r\n", idx,
+		 obj_proto[ornum].short_description,
+		 obj_proto[crnum].short_description);
+    mudlog(NRM, GET_LEVEL(ch), TRUE, "%s added put %d into %d in zone %d",
+	   GET_NAME(ch), obj_vnum, container_vnum, zone);
+}
+
+static void zedit_door(struct char_data *ch, int rnum, int zone, char *args)
+{
+    int room_vnum, dir, state;
+
+    if (sscanf(args, " %d %d %d", &room_vnum, &dir, &state) != 3)
+    {
+	send_to_char(ch, "Usage: zedit <zone> door <room vnum> <dir 0-%d> <state 0-2>\r\n",
+		     NUM_OF_DIRS - 1);
+	return;
+    }
+
+    room_rnum rrnum = real_room(room_vnum);
+    if (rrnum == NOWHERE)
+    {
+	send_to_char(ch, "Room %d doesn't exist.\r\n", room_vnum);
+	return;
+    }
+    if (dir < 0 || dir >= NUM_OF_DIRS)
+    {
+	send_to_char(ch, "Direction must be 0 to %d.\r\n", NUM_OF_DIRS - 1);
+	return;
+    }
+    if (state < 0 || state > 2)
+    {
+	send_to_char(ch, "State must be 0 (open), 1 (closed), or 2 (locked).\r\n");
+	return;
+    }
+    if (world[rrnum].dir_option[dir] == NULL)
+    {
+	send_to_char(ch, "Room %d has no %s exit.\r\n", room_vnum, dirs[dir]);
+	return;
+    }
+
+    int idx = zedit_append_cmd(rnum, 'D', 0, rrnum, dir, state);
+    zedit_resync_world(rnum);
+    send_to_char(ch, "Added [%d] D: %s %s exit of %s.\r\n", idx,
+		 door_state_names[state], dirs[dir], world[rrnum].name);
+    mudlog(NRM, GET_LEVEL(ch), TRUE, "%s set door in zone %d: room %d %s %s",
+	   GET_NAME(ch), zone, room_vnum, dirs[dir], door_state_names[state]);
+}
+
+static void zedit_list(struct char_data *ch, int rnum)
+{
+    struct zone_data *z = &zone_table[rnum];
+
+    send_to_char(ch, "Reset commands for zone %d (%s):\r\n", z->number, z->name);
+
+    for (int i = 0; ; i++)
+    {
+	struct reset_com *c = &z->cmd[i];
+	switch (c->command)
+	{
+	case 'M':
+	    send_to_char(ch, "[%3d] M  load %s in %s (m%d/r%d)\r\n", i,
+			 mob_proto[c->arg1].player.short_descr,
+			 world[c->arg3].name,
+			 mob_index[c->arg1].vnum, world[c->arg3].number);
+	    break;
+	case 'O':
+	    if (c->arg3 == NOWHERE)
+		send_to_char(ch, "[%3d] O  load %s (inventory, pending G/E) (o%d)\r\n",
+			     i, obj_proto[c->arg1].short_description,
+			     obj_index[c->arg1].vnum);
+	    else
+		send_to_char(ch, "[%3d] O  load %s in %s (o%d/r%d)\r\n", i,
+			     obj_proto[c->arg1].short_description,
+			     world[c->arg3].name,
+			     obj_index[c->arg1].vnum, world[c->arg3].number);
+	    break;
+	case 'G':
+	    send_to_char(ch, "[%3d] G  give %s (o%d)\r\n", i,
+			 obj_proto[c->arg1].short_description,
+			 obj_index[c->arg1].vnum);
+	    break;
+	case 'E':
+	    send_to_char(ch, "[%3d] E  equip %s on %s (o%d)\r\n", i,
+			 obj_proto[c->arg1].short_description,
+			 equipment_types[c->arg3],
+			 obj_index[c->arg1].vnum);
+	    break;
+	case 'P':
+	    send_to_char(ch, "[%3d] P  put %s in %s (o%d/c%d)\r\n", i,
+			 obj_proto[c->arg1].short_description,
+			 obj_proto[c->arg3].short_description,
+			 obj_index[c->arg1].vnum, obj_index[c->arg3].vnum);
+	    break;
+	case 'D':
+	    send_to_char(ch, "[%3d] D  %s %s exit of %s (r%d)\r\n", i,
+			 door_state_names[c->arg3], dirs[c->arg2],
+			 world[c->arg1].name, world[c->arg1].number);
+	    break;
+	case '*':
+	    send_to_char(ch, "[%3d] *  (disabled)\r\n", i);
+	    break;
+	case 'S':
+	    send_to_char(ch, "[%3d] S  end\r\n", i);
+	    return;
+	default:
+	    send_to_char(ch, "[%3d] %c  (unknown command)\r\n", i, c->command);
+	    break;
+	}
+    }
+}
+
+static void zedit_remove(struct char_data *ch, int rnum, int zone, char *args)
+{
+    int idx;
+
+    if (sscanf(args, " %d", &idx) != 1)
+    {
+	send_to_char(ch, "Usage: zedit <zone> remove <index>\r\n");
+	return;
+    }
+
+    int count = zedit_cmd_count(rnum);
+    if (idx < 0 || idx >= count - 1)
+    {
+	send_to_char(ch, "Index must be 0 to %d (cannot remove terminator).\r\n",
+		     count - 2);
+	return;
+    }
+
+    struct zone_data *z = &zone_table[rnum];
+    char removed_cmd = z->cmd[idx].command;
+
+    clean_zone(rnum);
+
+    memmove(&z->cmd[idx], &z->cmd[idx + 1],
+	    sizeof(struct reset_com) * (count - idx - 1));
+    RECREATE(z->cmd, struct reset_com, count - 1);
+
+    reset_zone(rnum);
+
+    send_to_char(ch, "Removed [%d] %c from zone %d.\r\n", idx, removed_cmd, zone);
+    mudlog(NRM, GET_LEVEL(ch), TRUE, "%s removed reset cmd %d (%c) from zone %d",
+	   GET_NAME(ch), idx, removed_cmd, zone);
+}
+
 void do_zedit(struct char_data *ch, char *argument, int cmd, int subcmd)
 {
     int zone;
@@ -1991,7 +2380,9 @@ void do_zedit(struct char_data *ch, char *argument, int cmd, int subcmd)
     if (nfields < 2)
     {
 	send_to_char(ch, "ZEDIT <zone> <command> ...\r\n"
-		     "Commands: info, open, close, lock, unlock, grant, revoke, create\r\n");
+		     "Commands: info, open, close, lock, unlock, grant, revoke,\r\n"
+		     "          create, list, remove, mobile, object, give, equip,\r\n"
+		     "          put, door\r\n");
 	return;
     }
 
@@ -2130,10 +2521,57 @@ void do_zedit(struct char_data *ch, char *argument, int cmd, int subcmd)
 	}
 	zedit_grant_revoke(ch, rnum, zone, 0, argument + nconsumed);
     }
+    else if (strncmp("list", s1, strlen(s1)) == 0)
+    {
+	if (!olc_is_zone_author_or_editor(ch, rnum))
+	{
+	    send_to_char(ch, "You don't have permission to view that zone.\r\n");
+	    free(s1);
+	    return;
+	}
+	zedit_list(ch, rnum);
+    }
+    else if (strncmp("mobile", s1, strlen(s1)) == 0)
+    {
+	if (!zedit_require_lock(ch, rnum)) { free(s1); return; }
+	zedit_add_mobile(ch, rnum, zone, argument + nconsumed);
+    }
+    else if (strncmp("object", s1, strlen(s1)) == 0)
+    {
+	if (!zedit_require_lock(ch, rnum)) { free(s1); return; }
+	zedit_add_object(ch, rnum, zone, argument + nconsumed);
+    }
+    else if (strncmp("give", s1, strlen(s1)) == 0)
+    {
+	if (!zedit_require_lock(ch, rnum)) { free(s1); return; }
+	zedit_give(ch, rnum, zone, argument + nconsumed);
+    }
+    else if (strncmp("equip", s1, strlen(s1)) == 0)
+    {
+	if (!zedit_require_lock(ch, rnum)) { free(s1); return; }
+	zedit_equip(ch, rnum, zone, argument + nconsumed);
+    }
+    else if (strncmp("put", s1, strlen(s1)) == 0)
+    {
+	if (!zedit_require_lock(ch, rnum)) { free(s1); return; }
+	zedit_put(ch, rnum, zone, argument + nconsumed);
+    }
+    else if (strncmp("door", s1, strlen(s1)) == 0)
+    {
+	if (!zedit_require_lock(ch, rnum)) { free(s1); return; }
+	zedit_door(ch, rnum, zone, argument + nconsumed);
+    }
+    else if (strncmp("remove", s1, strlen(s1)) == 0)
+    {
+	if (!zedit_require_lock(ch, rnum)) { free(s1); return; }
+	zedit_remove(ch, rnum, zone, argument + nconsumed);
+    }
     else
     {
 	send_to_char(ch, "Unknown zedit command '%s'.\r\n"
-		     "Commands: info, open, close, lock, unlock, grant, revoke, create\r\n", s1);
+		     "Commands: info, open, close, lock, unlock, grant, revoke,\r\n"
+		     "          create, list, remove, mobile, object, give, equip,\r\n"
+		     "          put, door\r\n", s1);
     }
 
     free(s1);
