@@ -1,4 +1,4 @@
-# OpenCircleMUD
+# NewCirMUD
 Starting from a stock CircleMUD 3.1.  This will including updates and will be shared publically.
 This code base is running at mud.amstadt.com 4000 and will continue to run there.  A website
 for this project will appear at https://mud.amstadt.com as I move things along.  I'm completely
