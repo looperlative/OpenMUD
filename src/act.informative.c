@@ -164,16 +164,60 @@ void show_obj_modifiers(struct obj_data *obj, struct char_data *ch)
 }
 
 
+static const char *skip_article(const char *str)
+{
+  if (!strncasecmp(str, "a ", 2))   return str + 2;
+  if (!strncasecmp(str, "an ", 3))  return str + 3;
+  if (!strncasecmp(str, "the ", 4)) return str + 4;
+  return str;
+}
+
+
 void list_obj_to_char(struct obj_data *list, struct char_data *ch, int mode, int show)
 {
-  struct obj_data *i;
+  struct obj_data *i, *j;
   bool found = FALSE;
+  bool already_shown;
+  int count;
 
   for (i = list; i; i = i->next_content) {
-    if (CAN_SEE_OBJ(ch, i)) {
-      show_obj_to_char(i, ch, mode);
-      found = TRUE;
+    if (!CAN_SEE_OBJ(ch, i))
+      continue;
+
+    /* Skip if an earlier entry with the same rnum was already displayed */
+    already_shown = FALSE;
+    if (GET_OBJ_RNUM(i) != NOTHING) {
+      for (j = list; j != i; j = j->next_content) {
+        if (CAN_SEE_OBJ(ch, j) && GET_OBJ_RNUM(j) == GET_OBJ_RNUM(i)) {
+          already_shown = TRUE;
+          break;
+        }
+      }
     }
+    if (already_shown)
+      continue;
+
+    /* Count all visible objects with the same rnum from this point */
+    count = 0;
+    if (GET_OBJ_RNUM(i) != NOTHING) {
+      for (j = i; j; j = j->next_content)
+        if (CAN_SEE_OBJ(ch, j) && GET_OBJ_RNUM(j) == GET_OBJ_RNUM(i))
+          count++;
+    } else {
+      count = 1;
+    }
+
+    if (count > 1 && (mode == SHOW_OBJ_SHORT || mode == SHOW_OBJ_LONG)) {
+      const char *desc = (mode == SHOW_OBJ_SHORT) ? i->short_description : i->description;
+      send_to_char(ch, "%d %s", count, skip_article(desc));
+      show_obj_modifiers(i, ch);
+      send_to_char(ch, "\r\n");
+    } else {
+      if (count > 1)
+        send_to_char(ch, "(%d) ", count);
+      show_obj_to_char(i, ch, mode);
+    }
+    found = TRUE;
   }
   if (!found && show)
     send_to_char(ch, " Nothing.\r\n");
