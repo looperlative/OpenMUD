@@ -1,13 +1,24 @@
 # Summary of Changes Since `f82b7751`
 
-Approximately 60 commits, +4,379 / -678 lines across 58 files.
+64 commits, +5,546 / -986 lines across 69 files.
 
 ## OLC / Editing System (largest chunk)
-- Replaced incomplete OLC with custom system (`src/olc.c` +2,160 lines, `src/olc.h` +152)
+- Replaced incomplete OLC with custom system (`src/olc.c`, `src/olc.h`)
 - **REDIT** (rooms), **OEDIT** (objects), **MEDIT** (mobs) editors
 - `roommerge`, `mobmerge`, `oedit→obj` merge scripts (`bin/roommerge.pl`, etc.)
 - Saves to `redit.wld`, `oedit.obj`, `medit.mob`; merged back into world files
-- Zone permissions + beginnings of zone editing
+- REDIT/MEDIT/OEDIT now create new prototypes on-the-fly when a vnum within a valid zone range doesn't exist yet (`olc_create_room_proto`, `olc_create_mob_proto`, `olc_create_obj_proto`)
+- Validation changed: first checks vnum is within a zone range, then creates prototype if needed
+
+## ZEDIT — Zone Management
+- **Permission subcommands** (GRGOD+): `create`, `open`, `close`, `grant author|editor`, `revoke author|editor`
+- **Info subcommand**: `info` for any zone author/editor to view flags, authors, editors, lock state
+- **Lock/unlock lifecycle**: `lock` extracts all mobs/objects and resets the zone; `unlock` writes `.zon` file (with `.bak`) and releases lock; only the lock-holder or GRGOD+ may unlock
+- **Reset-command editing** (locked zone only): `mobile`, `object`, `give`, `equip`, `put`, `door`, `list`, `remove` subcommands; each mutation re-runs `clean_zone` + `reset_zone` for immediate feedback
+- `zedit_save_zone_file` translates rnums back to vnums on save so `.zon` files round-trip correctly
+
+## In-Game Help
+- Added `wizhelp.hlp` entries for **OLC**, **MEDIT**, **OEDIT**, **REDIT**, and **ZEDIT**
 
 ## Gameplay / Balance
 - Mage spell damage & mana rework; new spells: **memorize**, **teleport to**, **remove curse** scroll
@@ -31,6 +42,7 @@ Approximately 60 commits, +4,379 / -678 lines across 58 files.
 - Autosave player file on reboot
 - Mudwho HTML exporter, `who` HTML export, `mudwho.css`
 - `bootstrap.sh`, `libdiff.sh`; `.gitignore` cleanup; `cmphtml.pl` fix
+- Removed obsolete platform support (Amiga `autorun.amiga`, Windows `autorun.cmd`, VMS `vms_autorun.com`, Mac `macrun.pl`)
 - Cleared all gcc/ubuntu warnings
 
 ## UI / Quality of Life

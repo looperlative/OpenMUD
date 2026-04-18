@@ -9,15 +9,15 @@ All editor logic lives in `src/olc.c` with headers in `src/olc.h`. The generic s
 ## Current State by Editor
 
 ### MEDIT — ~95% complete
-Covers all core mob stats: name, short/long/detail desc, action flags, affects, alignment, level, AC, hitroll, HP/damage dice, gold, exp, position, sex, attack type, abilities. Save writes `medit.mob`. Permissions enforced via `olc_ok_to_edit()`.
+Covers all core mob stats: name, short/long/detail desc, action flags, affects, alignment, level, AC, hitroll, HP/damage dice, gold, exp, position, sex, attack type, abilities. Save writes `medit.mob`. Permissions enforced via `olc_ok_to_edit()`. Creates a new mob prototype (`olc_create_mob_proto`) if the vnum is within a valid zone range but doesn't exist yet.
 **Missing:** extra descriptions, special-procedure/script assignment, default inventory/equipment.
 
 ### OEDIT — ~90% complete
-Aliases, descriptions, type, wear/extra flags, weight/cost/rent, type-specific values (weapon/armor/potion/staff/container), affects, extra descs. Save writes `oedit.obj`. Permissions enforced via `olc_ok_to_edit()`.
+Aliases, descriptions, type, wear/extra flags, weight/cost/rent, type-specific values (weapon/armor/potion/staff/container), affects, extra descs. Save writes `oedit.obj`. Permissions enforced via `olc_ok_to_edit()`. Creates a new object prototype (`olc_create_obj_proto`) if the vnum is within a valid zone range but doesn't exist yet.
 **Missing:** quest-item flags, spell/charge editing polish on magical types.
 
-### REDIT — ~85% complete
-Name, desc, flags, sector, six exits with key/lock data, extra descs. Save writes `redit.wld`. Permissions enforced via `olc_ok_to_edit()`.
+### REDIT — ~90% complete
+Name, desc, flags, sector, six exits with key/lock data, extra descs. Save writes `redit.wld`. Permissions enforced via `olc_ok_to_edit()`. Creates a new room prototype (`olc_create_room_proto`) if the vnum is within a valid zone range but doesn't exist yet.
 **Missing:** nothing structural — mob/object placement is properly the zedit's job.
 
 ### ZEDIT — ~90% complete
@@ -66,6 +66,7 @@ Zone permission management, the lock/unlock lifecycle, and reset-command editing
 - Merge utilities (`mobmerge`, `roommerge`) for folding `*.mob` / `*.wld` edits back into canonical zone files.
 - `get_ptable_by_name()` exported in `db.h` for player name resolution.
 - zedit accessible at `LVL_IMMORT` in interpreter; subcommands enforce their own permission levels.
+- In-game help entries for OLC, MEDIT, OEDIT, REDIT, ZEDIT in `lib/text/help/wizhelp.hlp`.
 
 ## Work Remaining (priority order)
 
