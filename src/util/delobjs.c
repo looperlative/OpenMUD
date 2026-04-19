@@ -68,7 +68,7 @@ int main(int argc, char **argv)
     exit(1);
   }
   while (1) {
-    fread(&player, sizeof(player), 1, fl);
+    if (fread(&player, sizeof(player), 1, fl) < 1 && !feof(fl)) break;
 
     if (feof(fl)) {
       fclose(fl);

@@ -34,7 +34,7 @@ void show(char *filename)
   }
 
   for (;;) {
-    fread(&player, sizeof(struct char_file_u), 1, fl);
+    if (fread(&player, sizeof(struct char_file_u), 1, fl) < 1 && !feof(fl)) break;
     if (feof(fl)) {
       fclose(fl);
       exit(0);

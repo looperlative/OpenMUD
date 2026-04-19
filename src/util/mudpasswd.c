@@ -47,7 +47,7 @@ void pword(char *filename, char *name, char *password)
   }
 
   for (;;) {
-    fread(&buf, sizeof(buf), 1, fl);
+    if (fread(&buf, sizeof(buf), 1, fl) < 1 && !feof(fl)) break;
     if (feof(fl))
       break;
 
