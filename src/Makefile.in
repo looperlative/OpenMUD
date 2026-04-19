@@ -24,7 +24,7 @@ CFLAGS = @CFLAGS@ $(MYFLAGS) $(PROFILE)
 LIBS = @LIBS@ @CRYPTLIB@ @NETLIB@
 
 OBJFILES = act.comm.o act.informative.o act.item.o act.movement.o \
-	act.offensive.o act.other.o act.social.o act.wizard.o alias.o ban.o \
+	act.offensive.o act.other.o act.social.o act.wizard.o alias.o ban.o eqset.o \
 	boards.o castle.o class.o comm.o config.o constants.o db.o fight.o \
 	graph.o handler.o house.o interpreter.o limits.o magic.o mail.o \
 	mobact.o modify.o objsave.o olc.o random.o shop.o spec_assign.o \
@@ -122,6 +122,8 @@ act.wizard.o: act.wizard.c conf.h sysdep.h structs.h utils.h comm.h \
 	$(CC) -c $(CFLAGS) act.wizard.c
 alias.o: alias.c conf.h sysdep.h structs.h utils.h interpreter.h db.h
 	$(CC) -c $(CFLAGS) alias.c
+eqset.o: eqset.c conf.h sysdep.h structs.h utils.h db.h
+	$(CC) -c $(CFLAGS) eqset.c
 ban.o: ban.c conf.h sysdep.h structs.h utils.h comm.h interpreter.h handler.h db.h
 	$(CC) -c $(CFLAGS) ban.c
 boards.o: boards.c conf.h sysdep.h structs.h utils.h comm.h db.h boards.h \
