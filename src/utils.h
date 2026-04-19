@@ -106,6 +106,7 @@ void	update_pos(struct char_data *victim);
 #define CRASH_FILE	0
 #define ETEXT_FILE	1
 #define ALIAS_FILE	2
+#define EQSET_FILE	3
 
 /* breadth-first searching */
 #define BFS_ERROR		(-1)
@@ -322,6 +323,7 @@ void	update_pos(struct char_data *victim);
 #define POOFOUT(ch)		CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->poofout))
 #define GET_ALIASES(ch)		CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->aliases))
 #define GET_LAST_TELL(ch)	CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->last_tell))
+#define GET_EQSETS(ch)		CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->eqsets))
 
 #define GET_SKILL(ch, i)	CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->saved.skills[i]))
 #define SET_SKILL(ch, i, pct)	do { CHECK_PLAYER_SPECIAL((ch), (ch)->player_specials->saved.skills[i]) = pct; } while(0)

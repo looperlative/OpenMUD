@@ -570,6 +570,10 @@ int get_filename(char *filename, size_t fbufsize, int mode, const char *orig_nam
     prefix = LIB_PLRTEXT;
     suffix = SUF_TEXT;
     break;
+  case EQSET_FILE:
+    prefix = LIB_PLREQSETS;
+    suffix = SUF_EQSET;
+    break;
   default:
     return (0);
   }

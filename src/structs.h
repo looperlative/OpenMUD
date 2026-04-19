@@ -864,6 +864,16 @@ struct player_special_data_saved {
  * be changed freely; beware, though, that changing the contents of
  * player_special_data_saved will corrupt the playerfile.
  */
+/* Equipment set: a named snapshot of worn items (VNUMs by wear position) */
+#define MAX_EQSETS      5
+#define MAX_EQSET_NAME  20
+
+struct eqset_data {
+  char     name[MAX_EQSET_NAME + 1];
+  obj_vnum vnums[NUM_WEARS];   /* NOTHING means empty slot */
+  struct eqset_data *next;
+};
+
 struct player_special_data {
    struct player_special_data_saved saved;
 
@@ -871,6 +881,7 @@ struct player_special_data {
    char	*poofout;		/* Description upon a god's exit.       */
    struct alias_data *aliases;	/* Character's aliases			*/
    long last_tell;		/* idnum of last tell from		*/
+   struct eqset_data *eqsets;	/* Named equipment sets			*/
 };
 
 

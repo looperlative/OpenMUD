@@ -49,6 +49,7 @@ int find_eq_pos(struct char_data *ch, struct obj_data *obj, char *arg);
 void perform_get_from_container(struct char_data *ch, struct obj_data *obj, struct obj_data *cont, int mode);
 void perform_remove(struct char_data *ch, int pos);
 ACMD(do_remove);
+ACMD(do_eqset);
 ACMD(do_put);
 ACMD(do_get);
 ACMD(do_drop);
@@ -1469,4 +1470,202 @@ ACMD(do_remove)
     else
       perform_remove(ch, i);
   }
+}
+
+
+/* Equipment sets --------------------------------------------------------- */
+
+void write_eqsets(struct char_data *ch);
+
+extern const char *equipment_types[];
+extern struct obj_data *obj_proto;
+
+static int count_eqsets(struct char_data *ch)
+{
+  struct eqset_data *s;
+  int n = 0;
+  for (s = GET_EQSETS(ch); s; s = s->next)
+    n++;
+  return n;
+}
+
+static struct eqset_data *find_eqset(struct char_data *ch, const char *name)
+{
+  struct eqset_data *s;
+  for (s = GET_EQSETS(ch); s; s = s->next)
+    if (!str_cmp(s->name, name))
+      return s;
+  return NULL;
+}
+
+static void eqset_save(struct char_data *ch, char *name)
+{
+  struct eqset_data *s;
+  int i;
+
+  if (!*name) {
+    send_to_char(ch, "Save equipment set as what name?\r\n");
+    return;
+  }
+  if (strlen(name) > MAX_EQSET_NAME) {
+    send_to_char(ch, "Equipment set name too long (max %d characters).\r\n", MAX_EQSET_NAME);
+    return;
+  }
+  if (strchr(name, ' ')) {
+    send_to_char(ch, "Equipment set names may not contain spaces.\r\n");
+    return;
+  }
+
+  s = find_eqset(ch, name);
+  if (!s) {
+    if (count_eqsets(ch) >= MAX_EQSETS) {
+      send_to_char(ch, "You can only have %d equipment sets.\r\n", MAX_EQSETS);
+      return;
+    }
+    CREATE(s, struct eqset_data, 1);
+    strlcpy(s->name, name, sizeof(s->name));
+    s->next = GET_EQSETS(ch);
+    GET_EQSETS(ch) = s;
+  }
+
+  for (i = 0; i < NUM_WEARS; i++)
+    s->vnums[i] = GET_EQ(ch, i) ? GET_OBJ_VNUM(GET_EQ(ch, i)) : NOTHING;
+
+  write_eqsets(ch);
+  send_to_char(ch, "Equipment set '%s' saved.\r\n", name);
+}
+
+static void eqset_load(struct char_data *ch, char *name)
+{
+  struct eqset_data *s;
+  struct obj_data *obj, *next_obj;
+  int i;
+
+  if (!*name) {
+    send_to_char(ch, "Load which equipment set?\r\n");
+    return;
+  }
+
+  if (!(s = find_eqset(ch, name))) {
+    send_to_char(ch, "No equipment set named '%s'.\r\n", name);
+    return;
+  }
+
+  /* Phase 1: unequip everything we can */
+  for (i = 0; i < NUM_WEARS; i++) {
+    if ((obj = GET_EQ(ch, i)) == NULL)
+      continue;
+    if (OBJ_FLAGGED(obj, ITEM_NODROP)) {
+      act("You can't remove $p -- it must be CURSED!", FALSE, ch, obj, 0, TO_CHAR);
+      continue;
+    }
+    obj_to_char(unequip_char(ch, i), ch);
+  }
+
+  /* Phase 2: equip matching items from inventory */
+  for (i = 0; i < NUM_WEARS; i++) {
+    obj_rnum rnum;
+
+    if (s->vnums[i] == NOTHING || GET_EQ(ch, i) != NULL)
+      continue;
+    for (obj = ch->carrying; obj; obj = next_obj) {
+      next_obj = obj->next_content;
+      if (GET_OBJ_VNUM(obj) == s->vnums[i]) {
+        obj_from_char(obj);
+        equip_char(ch, obj, i);
+        break;
+      }
+    }
+    if (obj == NULL) {
+      rnum = real_object(s->vnums[i]);
+      if (rnum != NOTHING)
+        send_to_char(ch, "Not found: %s (%s).\r\n",
+                     obj_proto[rnum].short_description, equipment_types[i]);
+      else
+        send_to_char(ch, "Not found: object #%d (%s).\r\n",
+                     (int)s->vnums[i], equipment_types[i]);
+    }
+  }
+
+  send_to_char(ch, "Equipment set '%s' loaded.\r\n", name);
+}
+
+static void eqset_list(struct char_data *ch)
+{
+  struct eqset_data *s;
+  obj_rnum rnum;
+  int i, found;
+
+  if (GET_EQSETS(ch) == NULL) {
+    send_to_char(ch, "You have no saved equipment sets.\r\n");
+    return;
+  }
+
+  for (s = GET_EQSETS(ch); s; s = s->next) {
+    send_to_char(ch, "Set '%s':\r\n", s->name);
+    found = 0;
+    for (i = 0; i < NUM_WEARS; i++) {
+      if (s->vnums[i] == NOTHING)
+        continue;
+      rnum = real_object(s->vnums[i]);
+      if (rnum != NOTHING)
+        send_to_char(ch, "  %-20s %s\r\n", equipment_types[i],
+                     obj_proto[rnum].short_description);
+      else
+        send_to_char(ch, "  %-20s (object #%d)\r\n", equipment_types[i],
+                     (int)s->vnums[i]);
+      found = 1;
+    }
+    if (!found)
+      send_to_char(ch, "  (empty)\r\n");
+  }
+}
+
+static void eqset_delete(struct char_data *ch, char *name)
+{
+  struct eqset_data *s, *temp;
+
+  if (!*name) {
+    send_to_char(ch, "Delete which equipment set?\r\n");
+    return;
+  }
+
+  if (!(s = find_eqset(ch, name))) {
+    send_to_char(ch, "No equipment set named '%s'.\r\n", name);
+    return;
+  }
+
+  REMOVE_FROM_LIST(s, GET_EQSETS(ch), next);
+  free(s);
+  write_eqsets(ch);
+  send_to_char(ch, "Equipment set '%s' deleted.\r\n", name);
+}
+
+ACMD(do_eqset)
+{
+  char subcmd_arg[MAX_INPUT_LENGTH];
+  char name_arg[MAX_INPUT_LENGTH];
+
+  two_arguments(argument, subcmd_arg, name_arg);
+
+  if (!*subcmd_arg) {
+    send_to_char(ch, "Usage: eqset save|load|list|delete <name>\r\n");
+    return;
+  }
+
+  if (IS_NPC(ch)) {
+    send_to_char(ch, "NPCs don't use equipment sets.\r\n");
+    return;
+  }
+
+  if (is_abbrev(subcmd_arg, "save"))
+    eqset_save(ch, name_arg);
+  else if (is_abbrev(subcmd_arg, "load"))
+    eqset_load(ch, name_arg);
+  else if (is_abbrev(subcmd_arg, "list"))
+    eqset_list(ch);
+  else if (is_abbrev(subcmd_arg, "delete"))
+    eqset_delete(ch, name_arg);
+  else
+    send_to_char(ch, "Unknown subcommand. Use: save, load, list, delete.\r\n");
 }

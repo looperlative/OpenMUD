@@ -382,7 +382,28 @@ Usage: equipment
 
 Gives you a list of all the equipment you're wearing, holding, and wielding.
 
-See also: INVENTORY, REMOVE, WEAR
+See also: EQSET, INVENTORY, REMOVE, WEAR
+#
+EQSET
+
+Usage: eqset save <name>
+       eqset load <name>
+       eqset list
+       eqset delete <name>
+
+Saves and restores named equipment sets.  Equipment is never created or
+destroyed -- items simply move between your worn positions and inventory.
+
+  eqset save <name>   - Saves your current worn equipment as a named set.
+  eqset load <name>   - Removes everything you're wearing, then re-equips
+                        items from inventory that match the saved set.
+                        Cursed (nodrop) items will be skipped.
+  eqset list          - Shows all saved sets and their contents.
+  eqset delete <name> - Deletes the named set.
+
+You may have up to 5 equipment sets.  Set names may not contain spaces.
+
+See also: EQUIPMENT, WEAR, REMOVE
 #
 EXAMINE
 

@@ -38,6 +38,7 @@ extern int track_through_doors;
 void list_skills(struct char_data *ch);
 void appear(struct char_data *ch);
 void write_aliases(struct char_data *ch);
+void write_eqsets(struct char_data *ch);
 void perform_immort_vis(struct char_data *ch);
 SPECIAL(shop_keeper);
 ACMD(do_gen_comm);
@@ -120,12 +121,14 @@ ACMD(do_save)
     if (auto_save && GET_LEVEL(ch) <= LVL_IMMORT) {
       send_to_char(ch, "Saving aliases.\r\n");
       write_aliases(ch);
+      write_eqsets(ch);
       return;
     }
     send_to_char(ch, "Saving %s and aliases.\r\n", GET_NAME(ch));
   }
 
   write_aliases(ch);
+  write_eqsets(ch);
   save_char(ch);
   Crash_crashsave(ch);
   if (ROOM_FLAGGED(IN_ROOM(ch), ROOM_HOUSE_CRASH))

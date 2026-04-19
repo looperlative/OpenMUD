@@ -51,6 +51,7 @@ int isbanned(char *hostname);
 int Valid_Name(char *newname);
 void read_aliases(struct char_data *ch);
 void delete_aliases(const char *charname);
+void read_eqsets(struct char_data *ch);
 void roll_abils(struct char_data *ch, struct char_ability_data *abils);
 void olc_nanny(struct descriptor_data *d, char *arg);
 
@@ -88,6 +89,7 @@ ACMD(do_eat);
 ACMD(do_echo);
 ACMD(do_enter);
 ACMD(do_equipment);
+ACMD(do_eqset);
 ACMD(do_examine);
 ACMD(do_exit);
 ACMD(do_exits);
@@ -282,6 +284,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "embrace"  , POS_STANDING, do_action   , 0, 0 },
   { "enter"    , POS_STANDING, do_enter    , 0, 0 },
   { "equipment", POS_SLEEPING, do_equipment, 0, 0 },
+  { "eqset"    , POS_RESTING , do_eqset    , 0, 0 },
   { "exits"    , POS_RESTING , do_exits    , 0, 0 },
   { "examine"  , POS_SITTING , do_examine  , 0, 0 },
 
@@ -1559,6 +1562,7 @@ void nanny(struct descriptor_data *d, char *arg)
     case '1':
       reset_char(d->character);
       read_aliases(d->character);
+      read_eqsets(d->character);
 
       if (PLR_FLAGGED(d->character, PLR_INVSTART))
 	GET_INVIS_LEV(d->character) = GET_LEVEL(d->character);

@@ -137,6 +137,7 @@ long get_ptable_by_name(const char *name);
 void paginate_string(char *str, struct descriptor_data *d);
 struct time_info_data *mud_time_passed(time_t t2, time_t t1);
 void free_alias(struct alias_data *a);
+void free_eqsets(struct char_data *ch);
 void load_messages(void);
 void weather_and_time(int mode);
 void mag_assign_spells(void);
@@ -2700,6 +2701,7 @@ void free_char(struct char_data *ch)
       GET_ALIASES(ch) = (GET_ALIASES(ch))->next;
       free_alias(a);
     }
+    free_eqsets(ch);
     if (ch->player_specials->poofin)
       free(ch->player_specials->poofin);
     if (ch->player_specials->poofout)

@@ -38,6 +38,7 @@
 #define LIB_PLRTEXT	"plrtext/"
 #define LIB_PLROBJS	"plrobjs/"
 #define LIB_PLRALIAS	"plralias/"
+#define LIB_PLREQSETS	"plreqsets/"
 #define LIB_HOUSE	"house/"
 #define SLASH		"/"
 #else
@@ -47,6 +48,7 @@
 #define SUF_OBJS	"objs"
 #define SUF_TEXT	"text"
 #define SUF_ALIAS	"alias"
+#define SUF_EQSET	"eqset"
 
 #if defined(CIRCLE_AMIGA)
 #define FASTBOOT_FILE   "/.fastboot"    /* autorun: boot without sleep  */

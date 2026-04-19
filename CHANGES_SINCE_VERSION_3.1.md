@@ -50,3 +50,4 @@
 - Improved auto-exits (immortals see more)
 - Players can view spell affects and natural abilities; stats visible at level 10+
 - PRF flag strings updated; autoassist SYSERR fixed
+- **Equipment sets** (`eqset` command): players can save up to 5 named loadouts and switch between them; items move between worn positions and inventory without being created or destroyed; missing items reported on load; sets persist across sessions in `lib/plreqsets/`
