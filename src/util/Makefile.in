@@ -24,6 +24,7 @@ CFLAGS = @CFLAGS@ $(MYFLAGS) $(PROFILE) -I$(INCDIR)
 default: all
 
 all: $(BINDIR)/autowiz $(BINDIR)/delobjs $(BINDIR)/listrent \
+	$(BINDIR)/lkdump \
 	$(BINDIR)/mudpasswd $(BINDIR)/play2to3 $(BINDIR)/purgeplay \
 	$(BINDIR)/shopconv $(BINDIR)/showplay $(BINDIR)/sign $(BINDIR)/split \
 	$(BINDIR)/wld2html
@@ -33,6 +34,8 @@ autowiz: $(BINDIR)/autowiz
 delobjs: $(BINDIR)/delobjs
 
 listrent: $(BINDIR)/listrent
+
+lkdump: $(BINDIR)/lkdump
 
 mudpasswd: $(BINDIR)/mudpasswd
 
@@ -61,6 +64,10 @@ $(BINDIR)/delobjs: delobjs.c $(INCDIR)/conf.h $(INCDIR)/sysdep.h \
 $(BINDIR)/listrent: listrent.c $(INCDIR)/conf.h $(INCDIR)/sysdep.h \
 	$(INCDIR)/structs.h
 	$(CC) $(CFLAGS) -o $(BINDIR)/listrent listrent.c
+
+$(BINDIR)/lkdump: lkdump.c $(INCDIR)/conf.h $(INCDIR)/sysdep.h \
+	$(INCDIR)/structs.h $(INCDIR)/locker.h
+	$(CC) $(CFLAGS) -o $(BINDIR)/lkdump lkdump.c
 
 $(BINDIR)/mudpasswd: mudpasswd.c $(INCDIR)/conf.h $(INCDIR)/sysdep.h \
 	$(INCDIR)/structs.h $(INCDIR)/utils.h
