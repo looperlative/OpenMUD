@@ -161,6 +161,26 @@ along with their last 'rent' payment date.
 
 See also: HOUSE, HOUSES
 #
+LCONTROL
+
+Usage: lcontrol list
+       lcontrol show <lockername>
+       lcontrol delete <lockername>
+
+Locker control for immortals (GRGOD+).
+
+  lcontrol list           - List all lockers, their owners, guest count, and
+                            creation date.
+  lcontrol show <name>    - Display the owner, guest list, and contents of a
+                            specific locker.
+  lcontrol delete <name>  - Force-delete a locker and its contents.  This is
+                            permanent and cannot be undone.
+
+The ROOM_LOCKER room flag must be set on any room where players should be
+able to use locker commands.  Set this via redit's room flags toggle.
+
+See also: LOCKER
+#
 HOLYLIGHT
 
 Usage: holylight

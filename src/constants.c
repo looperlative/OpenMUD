@@ -54,6 +54,7 @@ const char *room_bits[] = {
   "ATRIUM",
   "OLC",
   "*",				/* BFS MARK */
+  "LOCKER",
   "\n"
 };
 

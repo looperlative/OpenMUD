@@ -28,6 +28,7 @@
 #define LIB_PLROBJS	":plrobjs:"
 #define LIB_PLRALIAS	":plralias:"
 #define LIB_HOUSE	":house:"
+#define LIB_PLRLOCKERS	":plrlockers:"
 #define SLASH		":"
 #elif defined(CIRCLE_AMIGA) || defined(CIRCLE_UNIX) || defined(CIRCLE_WINDOWS) || defined(CIRCLE_ACORN) || defined(CIRCLE_VMS)
 #define LIB_WORLD	"world/"
@@ -40,6 +41,7 @@
 #define LIB_PLRALIAS	"plralias/"
 #define LIB_PLREQSETS	"plreqsets/"
 #define LIB_HOUSE	"house/"
+#define LIB_PLRLOCKERS	"plrlockers/"
 #define SLASH		"/"
 #else
 #error "Unknown path components."
@@ -98,6 +100,7 @@
 #define MAIL_FILE	LIB_ETC"plrmail"   /* for the mudmail system	*/
 #define BAN_FILE	LIB_ETC"badsites"  /* for the siteban system	*/
 #define HCONTROL_FILE	LIB_ETC"hcontrol"  /* for the house system	*/
+#define LCONTROL_FILE	LIB_ETC"lcontrol"  /* for the locker system	*/
 #define TIME_FILE	LIB_ETC"time"	   /* for calendar system	*/
 #define CONFIG_FILE	LIB_ETC"config"	   /* runtime tunables override	*/
 

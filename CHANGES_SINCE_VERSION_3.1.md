@@ -2,6 +2,19 @@
 
 64 commits, +5,546 / -986 lines across 69 files.
 
+## Locker System (`src/locker.c`, `src/locker.h`)
+- Players can create named personal storage lockers (`locker create <name>`)
+- Locker names must be 1–20 alphanumeric characters (configurable via `max_locker_name_length`)
+- All locker commands require the player to be in a room flagged `ROOM_LOCKER`
+- New `ROOM_LOCKER` room flag (bit 16); available in redit via the room-flags toggle menu
+- Per-locker limits: max 2 of the same vnum (`max_locker_vnum_count`), max 100 distinct vnums (`max_locker_vnum_types`)
+- Ownership limits: max 1 locker owned per player (`max_lockers_owned`); max 3 lockers shared to any player (`max_lockers_shared`)
+- Owners may share access with `locker share <name> <player>` (toggling revokes); a warning about item-loss risk is printed when granting
+- Containers must be empty before storing (items are stored one at a time)
+- Immortal command `lcontrol { list | show <name> | delete <name> }` (GRGOD+) for administration
+- Locker objects persist in `lib/plrlockers/<name>.locker`; control records in `lib/etc/lcontrol`
+- All six limit variables are runtime-configurable via `lib/etc/config`
+
 ## OLC / Editing System (largest chunk)
 - Replaced incomplete OLC with custom system (`src/olc.c`, `src/olc.h`)
 - **REDIT** (rooms), **OEDIT** (objects), **MEDIT** (mobs) editors

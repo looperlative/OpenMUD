@@ -23,6 +23,7 @@
 #include "mail.h"
 #include "interpreter.h"
 #include "house.h"
+#include "locker.h"
 #include "constants.h"
 
 /**************************************************************************
@@ -189,6 +190,8 @@ void load_config(void)
   extern int auto_save, autosave_time, crash_file_timeout, rent_file_timeout;
   extern int max_filesize, max_bad_pws, siteok_everyone, nameserver_is_slow;
   extern int use_autowiz, movement_is_free;
+  extern int max_locker_name_length, max_locker_vnum_count, max_locker_vnum_types;
+  extern int max_lockers_owned, max_lockers_shared;
   extern char *OK, *NOPERSON, *NOEFFECT;
 
   static const struct {
@@ -223,6 +226,11 @@ void load_config(void)
     { "nameserver_is_slow",   &nameserver_is_slow   },
     { "use_autowiz",          &use_autowiz          },
     { "movement_is_free",     &movement_is_free     },
+    { "max_locker_name_length", &max_locker_name_length },
+    { "max_locker_vnum_count",  &max_locker_vnum_count  },
+    { "max_locker_vnum_types",  &max_locker_vnum_types  },
+    { "max_lockers_owned",      &max_lockers_owned      },
+    { "max_lockers_shared",     &max_lockers_shared     },
     { NULL, NULL }
   };
   static const struct {
@@ -601,6 +609,8 @@ void boot_db(void)
   if (!mini_mud) {
     log("Booting houses.");
     House_boot();
+    log("Booting lockers.");
+    Locker_boot();
   }
 
   for (i = 0; i <= top_of_zone_table; i++) {

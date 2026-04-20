@@ -85,6 +85,7 @@
 #define ROOM_ATRIUM		(1 << 13)  /* (R) The door to a house	*/
 #define ROOM_OLC		(1 << 14)  /* (R) Modifyable/!compress	*/
 #define ROOM_BFS_MARK		(1 << 15)  /* (R) breath-first srch mrk	*/
+#define ROOM_LOCKER		(1 << 16)  /* Room has locker access		*/
 
 
 /* Exit info: used in room_data.dir_option.exit_info */

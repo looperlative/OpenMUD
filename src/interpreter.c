@@ -114,6 +114,8 @@ ACMD(do_help);
 ACMD(do_hide);
 ACMD(do_hit);
 ACMD(do_house);
+ACMD(do_lcontrol);
+ACMD(do_locker);
 ACMD(do_insult);
 ACMD(do_inventory);
 ACMD(do_invis);
@@ -352,12 +354,14 @@ cpp_extern const struct command_info cmd_info[] = {
   { "look"     , POS_RESTING , do_look     , 0, SCMD_LOOK },
   { "laugh"    , POS_RESTING , do_action   , 0, 0 },
   { "last"     , POS_DEAD    , do_last     , LVL_GOD, 0 },
+  { "lcontrol" , POS_DEAD    , do_lcontrol , LVL_GRGOD, 0 },
   { "leave"    , POS_STANDING, do_leave    , 0, 0 },
   { "levels"   , POS_DEAD    , do_levels   , 0, 0 },
   { "list"     , POS_STANDING, do_not_here , 0, 0 },
   { "lick"     , POS_RESTING , do_action   , 0, 0 },
   { "lock"     , POS_SITTING , do_gen_door , 0, SCMD_LOCK },
   { "load"     , POS_DEAD    , do_load     , LVL_GOD, 0 },
+  { "locker"   , POS_STANDING, do_locker   , 0, 0 },
   { "love"     , POS_RESTING , do_action   , 0, 0 },
 
   { "moan"     , POS_RESTING , do_action   , 0, 0 },

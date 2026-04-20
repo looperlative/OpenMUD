@@ -696,6 +696,39 @@ Usage: levels
 Lists the levels of your class and the experience required to attain each
 level.
 #
+LOCKER LOCKERS
+
+Usage: locker
+       locker list
+       locker create <name>
+       locker delete <name>
+       locker show <name>
+       locker put <item> <lockername>
+       locker get <item> <lockername>
+       locker share <lockername> <player>
+
+Lockers are named personal storage spaces you can access from the locker
+room.  You must be standing in the locker room to use any locker command.
+
+  locker list     - Show all lockers you own or that have been shared with you.
+  locker create   - Create a new locker.  Names must be 1-20 letters and digits
+                    only (e.g. 'mylocker', 'chest1').  You may own only one
+                    locker at a time.
+  locker delete   - Permanently destroy a locker you own and all items in it.
+  locker show     - List the contents of a locker you have access to.
+  locker put      - Move an item from your inventory into a locker.  Containers
+                    must be emptied before storing them.
+  locker get      - Retrieve an item from a locker into your inventory.
+  locker share    - Grant or revoke another player's access to your locker.
+                    Using the command again with the same player toggles the
+                    access off.  You will be warned that a shared player can
+                    remove any item from the locker.
+
+Storage limits per locker: no more than 2 of the same item, and no more than
+100 different item types total.
+
+See also: LCONTROL
+#
 LIST
 
 Usage: list [item type]

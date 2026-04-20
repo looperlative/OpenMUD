@@ -165,6 +165,28 @@ int rent_file_timeout = 30;
 /****************************************************************************/
 
 
+/* LOCKER OPTIONS */
+
+/* maximum length of a locker name (letters and digits only) */
+int max_locker_name_length = 20;
+
+/* maximum number of the same vnum in one locker */
+int max_locker_vnum_count = 2;
+
+/* maximum number of distinct vnums in one locker */
+int max_locker_vnum_types = 100;
+
+/* maximum number of lockers a player may own as primary owner */
+int max_lockers_owned = 1;
+
+/* maximum number of lockers that may be shared with a single player */
+int max_lockers_shared = 3;
+
+
+/****************************************************************************/
+/****************************************************************************/
+
+
 /* ROOM NUMBERS */
 
 /* virtual number of room that mortals should enter at */
