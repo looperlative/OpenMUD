@@ -156,6 +156,13 @@ while ( : ) do
 
   DATE=`date`
   echo "autorun starting game $DATE" > syslog
+
+  # Merge OLC edits into world files before each startup
+  echo "running merge scripts" >> syslog
+  bin/roommerge.pl >> syslog 2>&1
+  bin/mobmerge.pl  >> syslog 2>&1
+  bin/objmerge.pl  >> syslog 2>&1
+
   echo "running bin/circle $FLAGS $PORT" >> syslog
 
   # On Cygwin, you may need to precede this next line with './' for
