@@ -183,7 +183,7 @@ void Locker_list_contents(struct char_data *ch, int idx)
       break;
     if ((obj = Obj_from_store(object, &i)) != NULL) {
       send_to_char(ch, " [%5d] %s\r\n", GET_OBJ_VNUM(obj), obj->short_description);
-      free_obj(obj);
+      extract_obj(obj);
       found++;
     }
   }
@@ -334,7 +334,7 @@ static void Locker_retrieve_obj(struct char_data *ch, char *name_arg, int idx)
       found_idx = i;
       obj = tmp;
     } else {
-      free_obj(tmp);
+      extract_obj(tmp);
     }
   }
 

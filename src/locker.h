@@ -22,5 +22,7 @@ int	count_lockers_shared_to(long idnum);
 int	Locker_can_access(struct char_data *ch, int idx);
 int	Locker_valid_name(const char *name);
 void	Locker_list_contents(struct char_data *ch, int idx);
+#ifndef CIRCLE_UTIL
 ACMD(do_locker);
 ACMD(do_lcontrol);
+#endif
