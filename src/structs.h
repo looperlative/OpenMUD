@@ -1040,6 +1040,13 @@ struct descriptor_data {
 
    int  ignore_proxy;
    int  olc_editor_idx;
+
+   /* GMCP protocol state — zero-initialized by CREATE()/calloc */
+   int  gmcp_enabled;              /* TRUE after IAC DO GMCP received */
+   int  gmcp_iac_state;            /* IAC parser state (IAC_NORMAL etc.) */
+   int  gmcp_sb_cmd;               /* command byte saved in IAC_GOT_CMD state */
+   char gmcp_sb_buf[4096];         /* accumulator for IAC SB subneg data */
+   int  gmcp_sb_len;               /* bytes currently in gmcp_sb_buf */
 };
 
 

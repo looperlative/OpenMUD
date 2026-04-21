@@ -22,6 +22,7 @@
 #include "screen.h"
 #include "constants.h"
 #include "olc.h"
+#include "gmcp.h"
 
 /*   external vars  */
 extern FILE *player_fl;
@@ -1293,6 +1294,8 @@ ACMD(do_advance)
   gain_exp_regardless(victim,
 	 level_exp(GET_CLASS(victim), newlevel) - GET_EXP(victim));
   save_char(victim);
+  gmcp_send_char_status(victim);
+  gmcp_send_char_vitals(victim);
 }
 
 ACMD(do_restore)
@@ -1332,6 +1335,7 @@ ACMD(do_restore)
     affect_total(vict);
     send_to_char(ch, "%s", OK);
     act("You have been fully healed by $N!", FALSE, vict, 0, ch, TO_CHAR);
+    gmcp_send_char_vitals(vict);
   }
 }
 
@@ -2620,8 +2624,11 @@ ACMD(do_set)
 
   /* save the character if a change was made */
   if (retval) {
-    if (!is_file && !IS_NPC(vict))
+    if (!is_file && !IS_NPC(vict)) {
+      gmcp_send_char_vitals(vict);
+      gmcp_send_char_status(vict);
       save_char(vict);
+    }
     if (is_file) {
       char_to_store(vict, &tmp_store);
       fseek(player_fl, (player_i) * sizeof(struct char_file_u), SEEK_SET);

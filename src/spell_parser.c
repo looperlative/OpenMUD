@@ -20,6 +20,7 @@
 #include "handler.h"
 #include "comm.h"
 #include "db.h"
+#include "gmcp.h"
 
 
 #define SINFO spell_info[spellnum]
@@ -636,15 +637,19 @@ ACMD(do_cast)
     WAIT_STATE(ch, PULSE_VIOLENCE);
     if (!tch || !skill_message(0, ch, tch, spellnum))
       send_to_char(ch, "You lost your concentration!\r\n");
-    if (mana > 0)
+    if (mana > 0) {
       GET_MANA(ch) = MAX(0, MIN(GET_MAX_MANA(ch), GET_MANA(ch) - (mana / 2)));
+      gmcp_send_char_vitals(ch);
+    }
     if (SINFO.violent && tch && IS_NPC(tch))
       hit(tch, ch, TYPE_UNDEFINED);
   } else { /* cast spell returns 1 on success; subtract mana & set waitstate */
     if (cast_spell(ch, tch, tobj, spellnum)) {
       WAIT_STATE(ch, PULSE_VIOLENCE);
-      if (mana > 0)
+      if (mana > 0) {
 	GET_MANA(ch) = MAX(0, MIN(GET_MAX_MANA(ch), GET_MANA(ch) - mana));
+        gmcp_send_char_vitals(ch);
+      }
     }
   }
 }

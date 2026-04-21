@@ -18,6 +18,7 @@
 #include "db.h"
 #include "handler.h"
 #include "interpreter.h"
+#include "gmcp.h"
 
 
 /* external variables */
@@ -279,6 +280,8 @@ void gain_exp(struct char_data *ch, int gain)
       else
 	send_to_char(ch, "You rise %d levels!\r\n", num_levels);
       set_title(ch, NULL);
+      gmcp_send_char_status(ch);
+      gmcp_send_char_vitals(ch);
       if (GET_LEVEL(ch) >= LVL_IMMORT)
         run_autowiz();
     }
@@ -317,6 +320,8 @@ void gain_exp_regardless(struct char_data *ch, int gain)
       else
 	send_to_char(ch, "You rise %d levels!\r\n", num_levels);
       set_title(ch, NULL);
+      gmcp_send_char_status(ch);
+      gmcp_send_char_vitals(ch);
       if (GET_LEVEL(ch) >= LVL_IMMORT)
         run_autowiz();
     }

@@ -21,6 +21,7 @@
 #include "spells.h"
 #include "house.h"
 #include "constants.h"
+#include "gmcp.h"
 
 
 /* external variables  */
@@ -170,8 +171,10 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   if (!AFF_FLAGGED(ch, AFF_SNEAK))
     act("$n has arrived.", TRUE, ch, 0, 0, TO_ROOM);
 
-  if (ch->desc != NULL)
+  if (ch->desc != NULL) {
     look_at_room(ch, 0);
+    gmcp_send_char_vitals(ch);
+  }
 
   if (ROOM_FLAGGED(IN_ROOM(ch), ROOM_DEATH) && GET_LEVEL(ch) < LVL_IMMORT) {
     if (GET_SKILL(ch, SKILL_AVOIDTRAPS)) {

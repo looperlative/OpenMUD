@@ -32,6 +32,7 @@ void	act(const char *str, int hide_invisible, struct char_data *ch,
 /* I/O functions */
 void	write_to_q(const char *txt, struct txt_q *queue, int aliased);
 int	write_to_descriptor(socket_t desc, const char *txt);
+int	write_to_descriptor_n(socket_t desc, const char *txt, size_t len);
 size_t	write_to_output(struct descriptor_data *d, const char *txt, ...) __attribute__ ((format (printf, 2, 3)));
 size_t	vwrite_to_output(struct descriptor_data *d, const char *format, va_list args);
 void	string_add(struct descriptor_data *d, char *str);

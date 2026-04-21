@@ -21,6 +21,7 @@
 #include "spells.h"
 #include "screen.h"
 #include "constants.h"
+#include "gmcp.h"
 
 ACMD(do_assist);
 
@@ -346,6 +347,7 @@ void change_alignment(struct char_data *ch, struct char_data *victim)
    * you move 1/16th of the way to having alignment -A.  Simple and fast.
    */
   GET_ALIGNMENT(ch) += (-GET_ALIGNMENT(victim) - GET_ALIGNMENT(ch)) / 16;
+  gmcp_send_char_status(ch);
 }
 
 
@@ -748,6 +750,7 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
     gain_exp(ch, GET_LEVEL(victim) * dam);
 
   update_pos(victim);
+  if (victim->desc) gmcp_send_char_vitals(victim);
 
   /*
    * skill_message sends a message from the messages file in lib/misc.
@@ -1018,6 +1021,8 @@ void perform_violence(void)
 	hit(ch, FIGHTING(ch), TYPE_UNDEFINED);
       }
     }
+    if (ch->desc) gmcp_send_char_vitals(ch);
+    if (FIGHTING(ch) && FIGHTING(ch)->desc) gmcp_send_char_vitals(FIGHTING(ch));
     if (MOB_FLAGGED(ch, MOB_SPEC) && GET_MOB_SPEC(ch) && !MOB_FLAGGED(ch, MOB_NOTDEADYET)) {
       char actbuf[MAX_INPUT_LENGTH] = "";
       (GET_MOB_SPEC(ch)) (ch, ch, 0, actbuf);

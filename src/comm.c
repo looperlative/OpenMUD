@@ -59,6 +59,7 @@
 #include "handler.h"
 #include "db.h"
 #include "house.h"
+#include "gmcp.h"
 
 #ifdef HAVE_ARPA_TELNET_H
 #include <arpa/telnet.h>
@@ -873,6 +874,10 @@ void heartbeat(int pulse)
     weather_and_time(1);
     affect_update();
     point_update();
+    { struct descriptor_data *gmcp_d;
+      for (gmcp_d = descriptor_list; gmcp_d; gmcp_d = gmcp_d->next)
+        if (STATE(gmcp_d) == CON_PLAYING && gmcp_d->character)
+          gmcp_send_char_vitals(gmcp_d->character); }
     fflush(player_fl);
   }
 
@@ -1429,6 +1434,7 @@ int new_descriptor(socket_t s)
   descriptor_list = newd;
 
   write_to_output(newd, "%s", GREETINGS);
+  gmcp_send_will(newd);
 
   return (0);
 }
@@ -1664,6 +1670,28 @@ int write_to_descriptor(socket_t desc, const char *txt)
 }
 
 
+/* Length-based variant of write_to_descriptor — required for binary GMCP data. */
+int write_to_descriptor_n(socket_t desc, const char *txt, size_t len)
+{
+  ssize_t bytes_written;
+  size_t write_total = 0;
+
+  while (len > 0) {
+    bytes_written = perform_socket_write(desc, txt + write_total, len);
+    if (bytes_written < 0) {
+      perror("SYSERR: Write to socket");
+      return (-1);
+    } else if (bytes_written == 0) {
+      return (write_total);
+    } else {
+      write_total += bytes_written;
+      len -= bytes_written;
+    }
+  }
+  return (write_total);
+}
+
+
 /*
  * Same information about perform_socket_write applies here. I like
  * standards, there are so many of them. -gg 6/30/98
@@ -1776,6 +1804,10 @@ int process_input(struct descriptor_data *t)
     /* at this point, we know we got some data from the read */
 
     *(read_point + bytes_read) = '\0';	/* terminate the string */
+
+    /* Strip IAC telnet sequences before character filtering */
+    bytes_read = gmcp_strip_iac(t, read_point, bytes_read);
+    *(read_point + bytes_read) = '\0';
 
     /* search for a newline in the data we just read */
     for (ptr = read_point; *ptr && !nl_pos; ptr++)

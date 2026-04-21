@@ -19,6 +19,7 @@
 #include "handler.h"
 #include "db.h"
 #include "screen.h"
+#include "gmcp.h"
 
 /* extern variables */
 extern int level_can_shout;
@@ -56,6 +57,10 @@ ACMD(do_say)
       delete_doubledollar(argument);
       send_to_char(ch, "You say, '%s'\r\n", argument);
     }
+    { struct char_data *rch;
+      for (rch = world[IN_ROOM(ch)].people; rch; rch = rch->next_in_room)
+        if (rch->desc)
+          gmcp_send_comm_channel(rch->desc, "say", GET_PC_NAME(ch), argument); }
   }
 }
 
@@ -83,16 +88,24 @@ ACMD(do_gsay)
 
     snprintf(buf, sizeof(buf), "$n tells the group, '%s'", argument);
 
-    if (AFF_FLAGGED(k, AFF_GROUP) && (k != ch))
+    if (AFF_FLAGGED(k, AFF_GROUP) && (k != ch)) {
       act(buf, FALSE, ch, 0, k, TO_VICT | TO_SLEEP);
+      if (k->desc)
+        gmcp_send_comm_channel(k->desc, "gsay", GET_PC_NAME(ch), argument);
+    }
     for (f = k->followers; f; f = f->next)
-      if (AFF_FLAGGED(f->follower, AFF_GROUP) && (f->follower != ch))
+      if (AFF_FLAGGED(f->follower, AFF_GROUP) && (f->follower != ch)) {
 	act(buf, FALSE, ch, 0, f->follower, TO_VICT | TO_SLEEP);
+        if (f->follower->desc)
+          gmcp_send_comm_channel(f->follower->desc, "gsay", GET_PC_NAME(ch), argument);
+      }
 
     if (PRF_FLAGGED(ch, PRF_NOREPEAT))
       send_to_char(ch, "%s", OK);
     else
       send_to_char(ch, "You tell the group, '%s'\r\n", argument);
+    if (ch->desc)
+      gmcp_send_comm_channel(ch->desc, "gsay", GET_PC_NAME(ch), argument);
   }
 }
 
@@ -117,6 +130,11 @@ void perform_tell(struct char_data *ch, struct char_data *vict, char *arg)
 
   if (!IS_NPC(vict) && !IS_NPC(ch))
     GET_LAST_TELL(vict) = GET_IDNUM(ch);
+
+  if (vict->desc)
+    gmcp_send_comm_channel(vict->desc, "tell", GET_PC_NAME(ch), arg);
+  if (ch->desc)
+    gmcp_send_comm_channel(ch->desc, "tell", GET_PC_NAME(ch), arg);
 }
 
 int is_tell_ok(struct char_data *ch, struct char_data *vict)
@@ -243,6 +261,10 @@ ACMD(do_spec_comm)
     else
       send_to_char(ch, "You %s %s, '%s'\r\n", action_sing, GET_NAME(vict), buf2);
     act(action_others, FALSE, ch, 0, vict, TO_NOTVICT);
+    if (vict->desc)
+      gmcp_send_comm_channel(vict->desc, CMD_NAME, GET_PC_NAME(ch), buf2);
+    if (ch->desc)
+      gmcp_send_comm_channel(ch->desc, CMD_NAME, GET_PC_NAME(ch), buf2);
   }
 }
 
@@ -458,6 +480,8 @@ ACMD(do_gen_comm)
     send_to_char(ch, "%s", OK);
   else
     send_to_char(ch, "%sYou %s, '%s'%s\r\n", COLOR_LEV(ch) >= C_CMP ? color_on : "", com_msgs[subcmd][1], argument, CCNRM(ch, C_CMP));
+  if (ch->desc)
+    gmcp_send_comm_channel(ch->desc, com_msgs[subcmd][1], GET_PC_NAME(ch), argument);
 
   snprintf(buf1, sizeof(buf1), "$n %ss, '%s'", com_msgs[subcmd][1], argument);
 
@@ -478,6 +502,7 @@ ACMD(do_gen_comm)
       act(buf1, FALSE, ch, 0, i->character, TO_VICT | TO_SLEEP);
       if (COLOR_LEV(i->character) >= C_NRM)
 	send_to_char(i->character, "%s", KNRM);
+      gmcp_send_comm_channel(i, com_msgs[subcmd][1], GET_PC_NAME(ch), argument);
     }
   }
 }
@@ -511,7 +536,11 @@ ACMD(do_qcomm)
       strlcpy(buf, argument, sizeof(buf));
 
     for (i = descriptor_list; i; i = i->next)
-      if (STATE(i) == CON_PLAYING && i != ch->desc && PRF_FLAGGED(i->character, PRF_QUEST))
+      if (STATE(i) == CON_PLAYING && i != ch->desc && PRF_FLAGGED(i->character, PRF_QUEST)) {
 	act(buf, 0, ch, 0, i->character, TO_VICT | TO_SLEEP);
+        gmcp_send_comm_channel(i, "quest", GET_PC_NAME(ch), argument);
+      }
+    if (ch->desc)
+      gmcp_send_comm_channel(ch->desc, "quest", GET_PC_NAME(ch), argument);
   }
 }

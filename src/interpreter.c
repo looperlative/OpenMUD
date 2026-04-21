@@ -23,6 +23,7 @@
 #include "mail.h"
 #include "screen.h"
 #include "olc.h"
+#include "gmcp.h"
 
 /* external variables */
 extern room_rnum r_mortal_start_room;
@@ -1268,6 +1269,11 @@ int perform_dupe_check(struct descriptor_data *d)
   REMOVE_BIT(PLR_FLAGS(d->character), PLR_MAILING | PLR_WRITING);
   REMOVE_BIT(AFF_FLAGS(d->character), AFF_GROUP);
   STATE(d) = CON_PLAYING;
+  gmcp_send_char_statusvars(d->character);
+  gmcp_send_char_status(d->character);
+  gmcp_send_char_vitals(d->character);
+  gmcp_send_room_info(d->character);
+  gmcp_send_char_items_list(d->character);
 
   switch (mode) {
   case RECON:
@@ -1608,6 +1614,10 @@ void nanny(struct descriptor_data *d, char *arg)
 	send_to_char(d->character, "%s", START_MESSG);
       }
       look_at_room(d->character, 0);
+      gmcp_send_char_statusvars(d->character);
+      gmcp_send_char_status(d->character);
+      gmcp_send_char_vitals(d->character);
+      gmcp_send_char_items_list(d->character);
       if (has_mail(GET_IDNUM(d->character)))
 	send_to_char(d->character, "You have mail waiting.\r\n");
       if (load_result == 2) {	/* rented items lost */

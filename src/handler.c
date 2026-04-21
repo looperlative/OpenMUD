@@ -20,6 +20,7 @@
 #include "interpreter.h"
 #include "spells.h"
 #include "olc.h"
+#include "gmcp.h"
 
 /* local vars */
 int extractions_pending = 0;
@@ -413,6 +414,8 @@ void char_to_room(struct char_data *ch, room_rnum room)
 
     if (!IS_NPC(ch) && GET_LEVEL(ch) < LVL_IMMORT)
       zone_table[world[room].zone].empty_age = 0;
+
+    gmcp_send_room_info(ch);
   }
 }
 
@@ -436,6 +439,8 @@ void obj_to_char(struct obj_data *object, struct char_data *ch)
     /* set flag for crash-save system, but not on mobs! */
     if (!IS_NPC(ch))
       SET_BIT(PLR_FLAGS(ch), PLR_CRASH);
+
+    gmcp_send_char_items_add(ch, object);
   } else
     log("SYSERR: NULL obj (%p) or char (%p) passed to obj_to_char.", object, ch);
 }
@@ -445,11 +450,13 @@ void obj_to_char(struct obj_data *object, struct char_data *ch)
 void obj_from_char(struct obj_data *object)
 {
   struct obj_data *temp;
+  struct char_data *ch;
 
   if (object == NULL) {
     log("SYSERR: NULL object passed to obj_from_char.");
     return;
   }
+  ch = object->carried_by;
   REMOVE_FROM_LIST(object, object->carried_by->carrying, next_content);
 
   /* set flag for crash-save system, but not on mobs! */
@@ -460,6 +467,8 @@ void obj_from_char(struct obj_data *object)
   IS_CARRYING_N(object->carried_by)--;
   object->carried_by = NULL;
   object->next_content = NULL;
+
+  gmcp_send_char_items_remove(ch, object);
 }
 
 
@@ -557,6 +566,7 @@ void equip_char(struct char_data *ch, struct obj_data *obj, int pos)
 		  GET_OBJ_AFFECT(obj), TRUE);
 
   affect_total(ch);
+  gmcp_send_char_items_add(ch, obj);
 }
 
 
@@ -593,6 +603,7 @@ struct obj_data *unequip_char(struct char_data *ch, int pos)
 		  GET_OBJ_AFFECT(obj), FALSE);
 
   affect_total(ch);
+  gmcp_send_char_items_remove(ch, obj);
 
   return (obj);
 }

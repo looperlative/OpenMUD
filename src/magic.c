@@ -20,6 +20,7 @@
 #include "db.h"
 #include "interpreter.h"
 #include "constants.h"
+#include "gmcp.h"
 
 
 /* external variables */
@@ -824,6 +825,7 @@ void mag_points(int level, struct char_data *ch, struct char_data *victim,
   GET_HIT(victim) = MIN(GET_MAX_HIT(victim), GET_HIT(victim) + healing);
   GET_MOVE(victim) = MIN(GET_MAX_MOVE(victim), GET_MOVE(victim) + move);
   update_pos(victim);
+  gmcp_send_char_vitals(victim);
 }
 
 
