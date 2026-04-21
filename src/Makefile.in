@@ -26,7 +26,7 @@ LIBS = @LIBS@ @CRYPTLIB@ @NETLIB@
 OBJFILES = act.comm.o act.informative.o act.item.o act.movement.o \
 	act.offensive.o act.other.o act.social.o act.wizard.o alias.o ban.o eqset.o \
 	boards.o castle.o class.o comm.o config.o constants.o db.o fight.o \
-	graph.o handler.o house.o interpreter.o limits.o locker.o magic.o mail.o \
+	gmcp.o graph.o handler.o house.o interpreter.o limits.o locker.o magic.o mail.o \
 	mobact.o modify.o objsave.o olc.o random.o shop.o spec_assign.o \
 	spec_procs.o spell_parser.o spells.o utils.o weather.o \
 	bsd-snprintf.o
@@ -97,7 +97,7 @@ ref:
 # gcc -MM)
 
 act.comm.o: act.comm.c conf.h sysdep.h structs.h utils.h comm.h interpreter.h \
-  handler.h db.h screen.h
+  handler.h db.h screen.h gmcp.h
 	$(CC) -c $(CFLAGS) act.comm.c
 act.informative.o: act.informative.c conf.h sysdep.h structs.h utils.h comm.h \
   interpreter.h handler.h db.h spells.h screen.h constants.h
@@ -106,7 +106,7 @@ act.item.o: act.item.c conf.h sysdep.h structs.h utils.h comm.h interpreter.h \
   handler.h db.h spells.h constants.h
 	$(CC) -c $(CFLAGS) act.item.c
 act.movement.o: act.movement.c conf.h sysdep.h structs.h utils.h comm.h \
-  interpreter.h handler.h db.h spells.h house.h constants.h
+  interpreter.h handler.h db.h spells.h house.h constants.h gmcp.h
 	$(CC) -c $(CFLAGS) act.movement.c
 act.offensive.o: act.offensive.c conf.h sysdep.h structs.h utils.h comm.h \
   interpreter.h handler.h db.h spells.h
@@ -118,7 +118,7 @@ act.social.o: act.social.c conf.h sysdep.h structs.h utils.h comm.h \
   interpreter.h handler.h db.h spells.h
 	$(CC) -c $(CFLAGS) act.social.c
 act.wizard.o: act.wizard.c conf.h sysdep.h structs.h utils.h comm.h \
-  interpreter.h handler.h db.h spells.h house.h screen.h constants.h
+  interpreter.h handler.h db.h spells.h house.h screen.h constants.h gmcp.h
 	$(CC) -c $(CFLAGS) act.wizard.c
 alias.o: alias.c conf.h sysdep.h structs.h utils.h interpreter.h db.h
 	$(CC) -c $(CFLAGS) alias.c
@@ -136,7 +136,7 @@ class.o: class.c conf.h sysdep.h structs.h db.h utils.h spells.h interpreter.h \
   constants.h
 	$(CC) -c $(CFLAGS) class.c
 comm.o: comm.c conf.h sysdep.h structs.h utils.h comm.h interpreter.h handler.h \
-  db.h house.h
+  db.h house.h gmcp.h
 	$(CC) -c $(CFLAGS) comm.c
 config.o: config.c conf.h sysdep.h structs.h interpreter.h
 	$(CC) -c $(CFLAGS) config.c
@@ -146,13 +146,15 @@ db.o: db.c conf.h sysdep.h structs.h utils.h db.h comm.h handler.h spells.h mail
   interpreter.h house.h constants.h
 	$(CC) -c $(CFLAGS) db.c
 fight.o: fight.c conf.h sysdep.h structs.h utils.h comm.h handler.h interpreter.h \
-  db.h spells.h screen.h constants.h
+  db.h spells.h screen.h constants.h gmcp.h
 	$(CC) -c $(CFLAGS) fight.c
+gmcp.o: gmcp.c conf.h sysdep.h structs.h utils.h comm.h db.h constants.h gmcp.h
+	$(CC) -c $(CFLAGS) gmcp.c
 graph.o: graph.c conf.h sysdep.h structs.h utils.h comm.h interpreter.h handler.h \
   db.h spells.h
 	$(CC) -c $(CFLAGS) graph.c
 handler.o: handler.c conf.h sysdep.h structs.h utils.h comm.h db.h handler.h \
-  interpreter.h spells.h
+  interpreter.h spells.h gmcp.h
 	$(CC) -c $(CFLAGS) handler.c
 house.o: house.c conf.h sysdep.h structs.h comm.h handler.h db.h interpreter.h \
   utils.h house.h constants.h
@@ -161,13 +163,13 @@ locker.o: locker.c conf.h sysdep.h structs.h comm.h handler.h db.h interpreter.h
   utils.h locker.h constants.h
 	$(CC) -c $(CFLAGS) locker.c
 interpreter.o: interpreter.c conf.h sysdep.h structs.h comm.h interpreter.h db.h \
-  utils.h spells.h handler.h mail.h screen.h
+  utils.h spells.h handler.h mail.h screen.h gmcp.h
 	$(CC) -c $(CFLAGS) interpreter.c
 limits.o: limits.c conf.h sysdep.h structs.h utils.h spells.h comm.h db.h \
-  handler.h
+  handler.h gmcp.h
 	$(CC) -c $(CFLAGS) limits.c
 magic.o: magic.c conf.h sysdep.h structs.h utils.h comm.h spells.h handler.h db.h \
-  constants.h
+  constants.h gmcp.h
 	$(CC) -c $(CFLAGS) magic.c
 mail.o: mail.c conf.h sysdep.h structs.h utils.h comm.h db.h interpreter.h \
   handler.h mail.h
@@ -196,7 +198,7 @@ spec_procs.o: spec_procs.c conf.h sysdep.h structs.h utils.h comm.h \
   interpreter.h handler.h db.h spells.h constants.h
 	$(CC) -c $(CFLAGS) spec_procs.c
 spell_parser.o: spell_parser.c conf.h sysdep.h structs.h utils.h interpreter.h \
-  spells.h handler.h comm.h db.h
+  spells.h handler.h comm.h db.h gmcp.h
 	$(CC) -c $(CFLAGS) spell_parser.c
 spells.o: spells.c conf.h sysdep.h structs.h utils.h comm.h spells.h handler.h \
   db.h constants.h interpreter.h
