@@ -267,6 +267,8 @@ void affect_total(struct char_data *ch)
 void affect_to_char(struct char_data *ch, struct affected_type *af)
 {
   struct affected_type *affected_alloc;
+  int is_new = (af->type > 0 && af->type <= MAX_SPELLS &&
+                !affected_by_spell(ch, af->type));
 
   CREATE(affected_alloc, struct affected_type, 1);
 
@@ -276,6 +278,9 @@ void affect_to_char(struct char_data *ch, struct affected_type *af)
 
   affect_modify(ch, af->location, af->modifier, af->bitvector, TRUE);
   affect_total(ch);
+
+  if (is_new)
+    gmcp_send_char_defences_add(ch, affected_alloc);
 }
 
 
@@ -288,6 +293,7 @@ void affect_to_char(struct char_data *ch, struct affected_type *af)
 void affect_remove(struct char_data *ch, struct affected_type *af)
 {
   struct affected_type *temp;
+  int spell_type = af->type;
 
   if (ch->affected == NULL) {
     core_dump();
@@ -298,6 +304,10 @@ void affect_remove(struct char_data *ch, struct affected_type *af)
   REMOVE_FROM_LIST(af, ch->affected, next);
   free(af);
   affect_total(ch);
+
+  if (spell_type > 0 && spell_type <= MAX_SPELLS &&
+      !affected_by_spell(ch, spell_type))
+    gmcp_send_char_defences_remove(ch, spell_type);
 }
 
 

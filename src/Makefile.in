@@ -148,7 +148,7 @@ db.o: db.c conf.h sysdep.h structs.h utils.h db.h comm.h handler.h spells.h mail
 fight.o: fight.c conf.h sysdep.h structs.h utils.h comm.h handler.h interpreter.h \
   db.h spells.h screen.h constants.h gmcp.h
 	$(CC) -c $(CFLAGS) fight.c
-gmcp.o: gmcp.c conf.h sysdep.h structs.h utils.h comm.h db.h constants.h gmcp.h
+gmcp.o: gmcp.c conf.h sysdep.h structs.h utils.h comm.h db.h constants.h spells.h gmcp.h
 	$(CC) -c $(CFLAGS) gmcp.c
 graph.o: graph.c conf.h sysdep.h structs.h utils.h comm.h interpreter.h handler.h \
   db.h spells.h

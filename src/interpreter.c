@@ -1274,6 +1274,7 @@ int perform_dupe_check(struct descriptor_data *d)
   gmcp_send_char_vitals(d->character);
   gmcp_send_room_info(d->character);
   gmcp_send_char_items_list(d->character);
+  gmcp_send_char_defences_list(d->character);
 
   switch (mode) {
   case RECON:
@@ -1618,6 +1619,7 @@ void nanny(struct descriptor_data *d, char *arg)
       gmcp_send_char_status(d->character);
       gmcp_send_char_vitals(d->character);
       gmcp_send_char_items_list(d->character);
+      gmcp_send_char_defences_list(d->character);
       if (has_mail(GET_IDNUM(d->character)))
 	send_to_char(d->character, "You have mail waiting.\r\n");
       if (load_result == 2) {	/* rented items lost */

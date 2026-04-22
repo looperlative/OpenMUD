@@ -34,4 +34,9 @@ void gmcp_send_char_items_remove(struct char_data *ch, struct obj_data *obj);
 void gmcp_send_comm_channel(struct descriptor_data *d, const char *channel,
                              const char *talker, const char *text);
 
+/* Spell/affect defence tracking */
+void gmcp_send_char_defences_list(struct char_data *ch);
+void gmcp_send_char_defences_add(struct char_data *ch, struct affected_type *af);
+void gmcp_send_char_defences_remove(struct char_data *ch, int spell_type);
+
 #endif /* __GMCP_H__ */

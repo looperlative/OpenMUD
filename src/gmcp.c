@@ -11,6 +11,7 @@
 #include "comm.h"
 #include "db.h"
 #include "constants.h"
+#include "spells.h"
 #include "gmcp.h"
 
 #ifdef HAVE_ARPA_TELNET_H
@@ -22,7 +23,8 @@
 #include <stdint.h>
 
 /* External data */
-extern const char *pc_class_types[];  /* class.c */
+extern const char *pc_class_types[];          /* class.c */
+extern struct spell_info_type spell_info[];   /* spell_parser.c */
 
 /* -----------------------------------------------------------------------
  * Internal helpers
@@ -390,4 +392,85 @@ void gmcp_send_comm_channel(struct descriptor_data *d, const char *channel,
     json_escape(text,    etext,   sizeof(etext)));
 
   gmcp_send_packet(d, "Comm.Channel.Text", json);
+}
+
+/* -----------------------------------------------------------------------
+ * Char.Defences — active spell affect tracking
+ * ----------------------------------------------------------------------- */
+
+/* Build the JSON object for a single affect (shared by List and Add). */
+static int defence_json(char *buf, size_t bufsz,
+                         const char *prefix,
+                         struct affected_type *af)
+{
+  char ename[64], remaining_text[32];
+
+  json_escape(spell_info[af->type].name, ename, sizeof(ename));
+
+  if (af->duration == -1)
+    snprintf(remaining_text, sizeof(remaining_text), "permanent");
+  else
+    snprintf(remaining_text, sizeof(remaining_text), "%d MUD hours", af->duration);
+
+  return snprintf(buf, bufsz,
+    "%s{\"name\":\"%s\",\"desc\":\"%s\",\"remaining\":%d,"
+    "\"remaining_unit\":\"mud_hours\",\"remaining_text\":\"%s\"}",
+    prefix, ename, ename, af->duration, remaining_text);
+}
+
+void gmcp_send_char_defences_list(struct char_data *ch)
+{
+  char json[4096];
+  char *p = json, *end = json + sizeof(json) - 4;
+  struct affected_type *af;
+  bool seen[MAX_SPELLS + 1];
+  int first = 1, i;
+
+  if (!ch->desc || !ch->desc->gmcp_enabled)
+    return;
+
+  for (i = 0; i <= MAX_SPELLS; i++)
+    seen[i] = FALSE;
+
+  *p++ = '[';
+
+  for (af = ch->affected; af && p < end; af = af->next) {
+    if (af->type <= 0 || af->type > MAX_SPELLS)
+      continue;
+    if (seen[af->type])
+      continue;
+    seen[af->type] = TRUE;
+    p += defence_json(p, end - p, first ? "" : ",", af);
+    first = 0;
+  }
+
+  *p++ = ']';
+  *p   = '\0';
+
+  gmcp_send_packet(ch->desc, "Char.Defences.List", json);
+}
+
+void gmcp_send_char_defences_add(struct char_data *ch, struct affected_type *af)
+{
+  char json[256];
+
+  if (!ch->desc || !ch->desc->gmcp_enabled)
+    return;
+
+  defence_json(json, sizeof(json), "", af);
+
+  gmcp_send_packet(ch->desc, "Char.Defences.Add", json);
+}
+
+void gmcp_send_char_defences_remove(struct char_data *ch, int spell_type)
+{
+  char json[64], ename[64];
+
+  if (!ch->desc || !ch->desc->gmcp_enabled)
+    return;
+
+  snprintf(json, sizeof(json), "\"%s\"",
+    json_escape(spell_info[spell_type].name, ename, sizeof(ename)));
+
+  gmcp_send_packet(ch->desc, "Char.Defences.Remove", json);
 }

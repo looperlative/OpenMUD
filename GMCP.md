@@ -194,6 +194,51 @@ Supported channels:
 
 ---
 
+### `Char.Defences.List`
+
+Sent at login and reconnect. Array of all currently active spell affects, one entry per unique spell type (multi-affect spells such as `bless` appear as one entry).
+
+```json
+[
+  {"name":"armor","desc":"armor","remaining":24,"remaining_unit":"mud_hours","remaining_text":"24 MUD hours"},
+  {"name":"bless","desc":"bless","remaining":6,"remaining_unit":"mud_hours","remaining_text":"6 MUD hours"}
+]
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | string | Spell name (lowercase, e.g. `"armor"`, `"bless"`, `"curse"`) |
+| `desc` | string | Same as `name` (IRE convention; extended fields carry detail) |
+| `remaining` | int | Remaining duration in mud hours; `-1` = permanent (god-only) |
+| `remaining_unit` | string | Always `"mud_hours"` |
+| `remaining_text` | string | Human-readable form, e.g. `"6 MUD hours"` or `"permanent"` |
+
+---
+
+### `Char.Defences.Add`
+
+Sent when a spell affect is applied and no instance of that spell was previously active. Object shape is identical to one element of `Char.Defences.List`.
+
+```json
+{"name":"armor","desc":"armor","remaining":24,"remaining_unit":"mud_hours","remaining_text":"24 MUD hours"}
+```
+
+Re-casting an already-active spell (duration refresh) does **not** send a new `Char.Defences.Add` — the defence is already in the client's list.
+
+---
+
+### `Char.Defences.Remove`
+
+Sent when the last instance of a spell affect is removed. Plain string per IRE convention.
+
+```json
+"armor"
+```
+
+Triggers: spell expiry (`affect_update`), cure spells (`remove curse`, `cure blindness`, etc.), character death (all affects stripped), or god commands.
+
+---
+
 ## Modules: Client → Server
 
 ### `Core.Supports.Set`
@@ -220,6 +265,9 @@ Item IDs are the C pointer address of the `obj_data` structure cast to `unsigned
 | `Char.Items.List` | Login, reconnect |
 | `Char.Items.Add` | `obj_to_char()`, `equip_char()` |
 | `Char.Items.Remove` | `obj_from_char()`, `unequip_char()` |
+| `Char.Defences.List` | Login, reconnect |
+| `Char.Defences.Add` | Spell affect applied (first instance of that spell type only) |
+| `Char.Defences.Remove` | Last instance of a spell affect removed (expiry, cure, death, god purge) |
 | `Comm.Channel.Text` | say, tell, whisper, ask, gsay, gossip, holler, auction, congratulate, quest |
 
 ---
