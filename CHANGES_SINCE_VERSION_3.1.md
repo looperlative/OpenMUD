@@ -58,6 +58,20 @@
 - Removed obsolete platform support (Amiga `autorun.amiga`, Windows `autorun.cmd`, VMS `vms_autorun.com`, Mac `macrun.pl`)
 - Cleared all gcc/ubuntu warnings
 
+## GMCP — Generic MUD Communication Protocol (`src/gmcp.c`, `src/gmcp.h`)
+- GMCP implemented via Telnet sub-negotiation (option 201 / 0xC9); negotiated with `IAC WILL GMCP` / `IAC DO GMCP`
+- All sends are no-ops for non-GMCP clients (`d->gmcp_enabled` guard); safe to call unconditionally
+- IAC byte-stuffing handled in `process_input()` via `gmcp_strip_iac()` before the normal printable-char filter
+- Output uses `write_to_descriptor_n()` (binary-safe, length-based) to bypass the text pipeline
+- **Modules sent:** `Core.Hello`, `Char.StatusVars`, `Char.Status`, `Char.Vitals`, `Room.Info`, `Char.Items.List/Add/Remove`, `Char.Defences.List/Add/Remove`, `Comm.Channel.Text`
+- **`Char.Status`** fields: `name`, `class`, `level`, `align`, `xp`, `xp_next`, `ac` (display units, −10..+10)
+- **`Char.Vitals`** fields: `hp`, `hpmax`, `mp`, `mpmax`, `mv`, `mvmax`, `gold`, `hungry` (0–24), `thirsty` (0–24)
+- `Char.Status` updated on: login, reconnect, level-up, any XP gain/loss, alignment change, equip/unequip, god `advance`/`set`
+- `Char.Vitals` updated on: login, reconnect, combat round, `damage()`, healing, spell mana cost, movement, god `restore`, regen tick, food/thirst condition change
+- `Char.Defences` tracks active spell affects; `Add` fires only on first instance of a spell type; `Remove` fires when last instance expires
+- `Comm.Channel.Text` fires for: say, tell, whisper, ask, gsay, gossip, holler, auction, congratulate, quest
+- Protocol documented in `GMCP.md`
+
 ## UI / Quality of Life
 - Opponent + tank status in prompt
 - Improved auto-exits (immortals see more)

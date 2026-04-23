@@ -25,6 +25,8 @@
 /* External data */
 extern const char *pc_class_types[];          /* class.c */
 extern struct spell_info_type spell_info[];   /* spell_parser.c */
+extern int level_exp(int chclass, int level);        /* limits.c */
+extern int compute_armor_class(struct char_data *ch); /* fight.c  */
 
 /* -----------------------------------------------------------------------
  * Internal helpers
@@ -215,16 +217,20 @@ int gmcp_strip_iac(struct descriptor_data *d, char *buf, int len)
 
 void gmcp_send_char_vitals(struct char_data *ch)
 {
-  char json[256];
+  char json[512];
 
   if (!ch->desc || !ch->desc->gmcp_enabled)
     return;
 
   snprintf(json, sizeof(json),
-    "{\"hp\":%d,\"hpmax\":%d,\"mp\":%d,\"mpmax\":%d,\"mv\":%d,\"mvmax\":%d}",
+    "{\"hp\":%d,\"hpmax\":%d,\"mp\":%d,\"mpmax\":%d,\"mv\":%d,\"mvmax\":%d,"
+    "\"gold\":%d,\"hungry\":%d,\"thirsty\":%d}",
     GET_HIT(ch), GET_MAX_HIT(ch),
     GET_MANA(ch), GET_MAX_MANA(ch),
-    GET_MOVE(ch), GET_MAX_MOVE(ch));
+    GET_MOVE(ch), GET_MAX_MOVE(ch),
+    GET_GOLD(ch),
+    GET_COND(ch, FULL)   < 0 ? 24 : GET_COND(ch, FULL),
+    GET_COND(ch, THIRST) < 0 ? 24 : GET_COND(ch, THIRST));
 
   gmcp_send_packet(ch->desc, "Char.Vitals", json);
 }
@@ -235,13 +241,15 @@ void gmcp_send_char_statusvars(struct char_data *ch)
     return;
 
   gmcp_send_packet(ch->desc, "Char.StatusVars",
-    "{\"name\":\"Char Name\",\"race\":\"Race\",\"class\":\"Class\","
-    "\"level\":\"Level\",\"align\":\"Alignment\"}");
+    "{\"name\":\"Char Name\",\"class\":\"Class\",\"level\":\"Level\","
+    "\"align\":\"Alignment\",\"xp\":\"Experience\","
+    "\"xp_next\":\"XP To Level\",\"ac\":\"Armor Class\","
+    "\"gold\":\"Gold\",\"hungry\":\"Food\",\"thirsty\":\"Thirst\"}");
 }
 
 void gmcp_send_char_status(struct char_data *ch)
 {
-  char json[512], ename[128], eclass[64];
+  char json[1024], ename[128], eclass[64];
   const char *align_str;
 
   if (!ch->desc || !ch->desc->gmcp_enabled)
@@ -250,11 +258,15 @@ void gmcp_send_char_status(struct char_data *ch)
   align_str = IS_GOOD(ch) ? "good" : IS_EVIL(ch) ? "evil" : "neutral";
 
   snprintf(json, sizeof(json),
-    "{\"name\":\"%s\",\"class\":\"%s\",\"level\":\"%d\",\"align\":\"%s\"}",
+    "{\"name\":\"%s\",\"class\":\"%s\",\"level\":%d,\"align\":\"%s\","
+    "\"xp\":%d,\"xp_next\":%d,\"ac\":%d}",
     json_escape(GET_PC_NAME(ch), ename, sizeof(ename)),
     json_escape(pc_class_types[(int)GET_CLASS(ch)], eclass, sizeof(eclass)),
     (int)GET_LEVEL(ch),
-    align_str);
+    align_str,
+    GET_EXP(ch),
+    level_exp(GET_CLASS(ch), GET_LEVEL(ch) + 1),
+    compute_armor_class(ch) / 10);
 
   gmcp_send_packet(ch->desc, "Char.Status", json);
 }

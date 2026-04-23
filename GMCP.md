@@ -40,10 +40,12 @@ Sent once immediately after `IAC DO GMCP` is received.
 
 ### `Char.StatusVars`
 
-Sent once at login/reconnect. Describes the *labels* for the status fields; values are in `Char.Status`.
+Sent once at login/reconnect. Describes the *labels* for the status fields; values are in `Char.Status` and `Char.Vitals`.
 
 ```json
-{"name":"Char Name","race":"Race","class":"Class","level":"Level","align":"Alignment"}
+{"name":"Char Name","class":"Class","level":"Level","align":"Alignment",
+ "xp":"Experience","xp_next":"XP To Level","ac":"Armor Class",
+ "gold":"Gold","hungry":"Food","thirsty":"Thirst"}
 ```
 
 All values are literal label strings. Clients use this to build display widgets before the first `Char.Status` arrives.
@@ -52,29 +54,32 @@ All values are literal label strings. Clients use this to build display widgets 
 
 ### `Char.Status`
 
-Sent at login, on reconnect, on level-up (via `gain_exp`, `gain_exp_regardless`, or `do_advance`), on alignment change (kill XP), and when a god uses `set` on the character.
+Sent at login, on reconnect, on level-up, on any XP gain or loss, on alignment change, on equip/unequip, and when a god uses `set` on the character.
 
 ```json
-{"name":"Gandalf","class":"Magic User","level":"12","align":"good"}
+{"name":"Gandalf","class":"Magic User","level":12,"align":"good",
+ "xp":45230,"xp_next":75000,"ac":-3}
 ```
 
 | Field | Type | Description |
 |---|---|---|
 | `name` | string | Character name (PC name, not title) |
 | `class` | string | Class name from `pc_class_types[]` |
-| `level` | string | Current level as a decimal string |
+| `level` | int | Current level |
 | `align` | string | `"good"`, `"neutral"`, or `"evil"` |
-
-`level` is sent as a string to match the `Char.StatusVars` label convention.
+| `xp` | int | Current experience points |
+| `xp_next` | int | Experience required to reach the next level |
+| `ac` | int | Armor class in display units (−10 to +10); lower is better. Includes DEX defensive bonus. Equivalent to the value shown by the `score` command. |
 
 ---
 
 ### `Char.Vitals`
 
-Sent on: login, reconnect, each combat round (attacker and defender), every damage source via `damage()`, every healing spell via `mag_points()`, spell mana cost (success and fail paths), movement, god `restore`, and once per mud-hour regen tick.
+Sent on: login, reconnect, each combat round (attacker and defender), every damage source via `damage()`, every healing spell via `mag_points()`, spell mana cost (success and fail paths), movement, god `restore`, regen tick, and whenever the food or thirst condition changes.
 
 ```json
-{"hp":85,"hpmax":120,"mp":40,"mpmax":200,"mv":60,"mvmax":100}
+{"hp":85,"hpmax":120,"mp":40,"mpmax":200,"mv":60,"mvmax":100,
+ "gold":1250,"hungry":18,"thirsty":12}
 ```
 
 | Field | Type | Description |
@@ -85,6 +90,9 @@ Sent on: login, reconnect, each combat round (attacker and defender), every dama
 | `mpmax` | int | Maximum mana |
 | `mv` | int | Current movement points |
 | `mvmax` | int | Maximum movement points |
+| `gold` | int | Gold coins currently carried (not bank gold) |
+| `hungry` | int | Food level 0–24; 0 = hungry, 24 = full. Immortals always report 24. |
+| `thirsty` | int | Thirst level 0–24; 0 = thirsty, 24 = quenched. Immortals always report 24. |
 
 ---
 
@@ -259,8 +267,8 @@ Item IDs are the C pointer address of the `obj_data` structure cast to `unsigned
 |---|---|
 | `Core.Hello` | Once, on `IAC DO GMCP` |
 | `Char.StatusVars` | Login, reconnect |
-| `Char.Status` | Login, reconnect, level-up, alignment change, god `advance`/`set` |
-| `Char.Vitals` | Login, reconnect, combat round (both sides), any `damage()` call, healing spell, spell cast (mana cost), movement, god `restore`, regen tick |
+| `Char.Status` | Login, reconnect, level-up, any XP gain/loss, alignment change, equip/unequip, god `advance`/`set` |
+| `Char.Vitals` | Login, reconnect, combat round (both sides), any `damage()` call, healing spell, spell cast (mana cost), movement, god `restore`, regen tick, food/thirst condition change |
 | `Room.Info` | Any `char_to_room()` call, reconnect |
 | `Char.Items.List` | Login, reconnect |
 | `Char.Items.Add` | `obj_to_char()`, `equip_char()` |

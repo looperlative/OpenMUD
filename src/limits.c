@@ -284,12 +284,15 @@ void gain_exp(struct char_data *ch, int gain)
       gmcp_send_char_vitals(ch);
       if (GET_LEVEL(ch) >= LVL_IMMORT)
         run_autowiz();
+    } else {
+      gmcp_send_char_status(ch);
     }
   } else if (gain < 0) {
     gain = MAX(-max_exp_loss, gain);	/* Cap max exp lost per death */
     GET_EXP(ch) += gain;
     if (GET_EXP(ch) < 0)
       GET_EXP(ch) = 0;
+    gmcp_send_char_status(ch);
   }
 }
 
@@ -342,6 +345,9 @@ void gain_condition(struct char_data *ch, int condition, int value)
 
   GET_COND(ch, condition) = MAX(0, GET_COND(ch, condition));
   GET_COND(ch, condition) = MIN(24, GET_COND(ch, condition));
+
+  if (condition == FULL || condition == THIRST)
+    gmcp_send_char_vitals(ch);
 
   if (GET_COND(ch, condition) || PLR_FLAGGED(ch, PLR_WRITING))
     return;

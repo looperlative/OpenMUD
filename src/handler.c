@@ -577,6 +577,7 @@ void equip_char(struct char_data *ch, struct obj_data *obj, int pos)
 
   affect_total(ch);
   gmcp_send_char_items_add(ch, obj);
+  gmcp_send_char_status(ch);
 }
 
 
@@ -614,6 +615,7 @@ struct obj_data *unequip_char(struct char_data *ch, int pos)
 
   affect_total(ch);
   gmcp_send_char_items_remove(ch, obj);
+  gmcp_send_char_status(ch);
 
   return (obj);
 }
