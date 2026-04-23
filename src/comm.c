@@ -60,6 +60,7 @@
 #include "db.h"
 #include "house.h"
 #include "gmcp.h"
+#include "webserver.h"
 
 #ifdef HAVE_ARPA_TELNET_H
 #include <arpa/telnet.h>
@@ -364,6 +365,8 @@ void init_game(ush_int port)
 
   boot_db();
 
+  webserver_init(".");
+
 #if defined(CIRCLE_UNIX) || defined(CIRCLE_MACINTOSH)
   log("Signal trapping.");
   signal_setup();
@@ -377,6 +380,7 @@ void init_game(ush_int port)
   game_loop(mother_desc);
 
   Crash_save_all();
+  webserver_shutdown();
 
   log("Closing all sockets.");
   while (descriptor_list)
@@ -869,6 +873,9 @@ void heartbeat(int pulse)
 
   if (!(pulse % (30 * PASSES_PER_SEC)))
     make_who2html();
+
+  if (!(pulse % PASSES_PER_SEC))
+    webserver_refresh_who();
 
   if (!(pulse % (60 RL_SEC))) {
     struct descriptor_data *gmcp_d;
@@ -2612,39 +2619,51 @@ void circle_sleep(struct timeval *timeout)
 #endif /* CIRCLE_WINDOWS */
 
 void make_who2html(void) {
+#ifdef HAVE_CIVETWEB
+  /* The web handler reads live data on demand — nothing to do here. */
+#else
   extern struct descriptor_data *descriptor_list;
   extern char *class_abbrevs[];
-  FILE *opf;
   struct descriptor_data *d;
   struct char_data *ch;
-  char buf[1024];
+  static char buf[65536];
+  int pos = 0, count = 0;
+  FILE *opf;
 
-  if ((opf = fopen("mudwho.tmp", "w")) == 0) {
-    return; /* or log it ? *shrug* */
-  }
+#define W(fmt, ...) pos += snprintf(buf + pos, (int)sizeof(buf) - pos, fmt, ##__VA_ARGS__)
 
-  fprintf(opf, "<HTML><HEAD><TITLE>Who is on the Mud?</TITLE></HEAD>\n");
-  fprintf(opf, "<BODY><H1>Who is playing right now?</H1><HR>\n");
+  W("<!DOCTYPE html>\n<html>\n<head><title>Who is on the Mud?</title>\n<style>\n");
+  W("body { font-weight: 300; }\n");
+  W("table { border-collapse: collapse; }\n");
+  W("td { border: 2px solid lightblue; padding: 1px 1em; font-size: 16pt; font-weight: bold; }\n");
+  W("</style>\n</head>\n<body>\n<h1>Who is playing right now?</h1>\n<table>\n");
 
-  for(d = descriptor_list; d; d = d->next)
-    if(!d->connected)
-    {
-      if(d->original)
-	ch = d->original;
+  for (d = descriptor_list; d; d = d->next) {
+    if (!d->connected) {
+      if (d->original)
+        ch = d->original;
       else if (!(ch = d->character))
-	continue;
-      if(GET_LEVEL(ch) < LVL_IMMORT || (GET_LEVEL(ch)>=LVL_IMMORT && !GET_INVIS_LEV(ch)))
-      {
-	sprintf(buf, "[%2d %s] %s %s\n <BR>", GET_LEVEL(ch), CLASS_ABBR(ch),
-		GET_NAME(ch), GET_TITLE(ch));
-	fprintf(opf, "%s", buf);
+        continue;
+      if (GET_LEVEL(ch) < LVL_IMMORT || !GET_INVIS_LEV(ch)) {
+        W("<tr><td>%d</td><td>%s</td><td>%s</td><td>%s</td></tr>\n",
+          GET_LEVEL(ch), CLASS_ABBR(ch), GET_NAME(ch), GET_TITLE(ch));
+        count++;
       }
     }
-    else
-      fprintf(opf,"Apparently, nobody is logged on at the moment...");
+  }
 
-  fprintf(opf, "<HR></BODY></HTML>\n");
-  fclose(opf);
-  int ret = system("mv mudwho.tmp mudwho.html &");
-  ret = ret; // ignore return value.  We don't care if it fails.
+  if (count == 0)
+    W("<tr><td colspan=\"4\">Nobody is logged on at the moment.</td></tr>\n");
+
+  W("</table>\n</body></html>\n");
+#undef W
+
+  opf = fopen("mudwho.tmp", "w");
+  if (opf) {
+    fputs(buf, opf);
+    fclose(opf);
+    int ret = system("mv mudwho.tmp mudwho.html &");
+    (void)ret;
+  }
+#endif /* HAVE_CIVETWEB */
 }

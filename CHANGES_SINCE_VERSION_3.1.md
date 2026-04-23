@@ -2,6 +2,14 @@
 
 65 commits, +5,546 / -986 lines across 69 files.
 
+## Embedded Web Server (`src/webserver.c`, `src/webserver.h`)
+- When `libcivetweb` is present at build time, the MUD starts a lightweight HTTP server on `127.0.0.1:4445` (localhost only; intended to be proxied by Apache for HTTPS)
+- Serves the player-who-list at `http://localhost:4445/mud/who.html` by reading live MUD data structures on demand — no pre-rendered buffer, no 30-second delay
+- The who page uses an HTML table with embedded CSS (styled borders, 16pt bold cells); no dependency on any external stylesheet
+- Thread safety: the game loop holds a `pthread_mutex_t` during its active phase and releases it only during sleeps; the request handler acquires the same mutex, snapshots visible player data (level/class/name/title), releases the mutex, then builds and sends the response without holding the lock during network I/O
+- Detection is optional: `./configure` adds `-lcivetweb` and defines `HAVE_CIVETWEB` only when the library is found; without it the code compiles identically to before (file-based `mudwho.html` fallback)
+- `cnf/configure.in`, `cnf/acconfig.h`, `src/conf.h.in`, `src/Makefile.in`, `configure` updated for the new optional dependency
+
 ## Additional GMCP Modules (`src/gmcp.c`, `src/gmcp.h`)
 - **Core.Ping** — server sends `Core.Ping {}` to all connected descriptors every 60 seconds (heartbeat); keeps connections alive and lets clients measure latency (`comm.c` heartbeat)
 - **Core.Goodbye** — server sends `Core.Goodbye {}` immediately before closing any socket (`close_socket` in `comm.c`)

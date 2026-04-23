@@ -33,6 +33,9 @@
 /* Define if the system is capable of using crypt() to encrypt.  */
 #undef CIRCLE_CRYPT
 
+/* Define if libcivetweb is available for the embedded web server.  */
+#undef HAVE_CIVETWEB
+
 /* Define if we don't have proper support for the system's crypt().  */
 #undef HAVE_UNSAFE_CRYPT
 
