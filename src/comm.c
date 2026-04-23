@@ -870,6 +870,12 @@ void heartbeat(int pulse)
   if (!(pulse % (30 * PASSES_PER_SEC)))
     make_who2html();
 
+  if (!(pulse % (60 RL_SEC))) {
+    struct descriptor_data *gmcp_d;
+    for (gmcp_d = descriptor_list; gmcp_d; gmcp_d = gmcp_d->next)
+      gmcp_send_ping(gmcp_d);
+  }
+
   if (!(pulse % (SECS_PER_MUD_HOUR * PASSES_PER_SEC))) {
     weather_and_time(1);
     affect_update();
@@ -1991,6 +1997,7 @@ void close_socket(struct descriptor_data *d)
 {
   struct descriptor_data *temp;
 
+  gmcp_send_goodbye(d);
   REMOVE_FROM_LIST(d, descriptor_list, next);
   CLOSE_SOCKET(d->descriptor);
   flush_queues(d);

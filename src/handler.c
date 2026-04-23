@@ -276,8 +276,14 @@ void affect_to_char(struct char_data *ch, struct affected_type *af)
   affected_alloc->next = ch->affected;
   ch->affected = affected_alloc;
 
-  affect_modify(ch, af->location, af->modifier, af->bitvector, TRUE);
-  affect_total(ch);
+  {
+    long aff_before = AFF_FLAGS(ch) & GMCP_AFFLICTION_BITS;
+    affect_modify(ch, af->location, af->modifier, af->bitvector, TRUE);
+    affect_total(ch);
+    long newly_set = (AFF_FLAGS(ch) & GMCP_AFFLICTION_BITS) & ~aff_before;
+    if (newly_set)
+      gmcp_send_char_afflictions_add(ch, newly_set);
+  }
 
   if (is_new)
     gmcp_send_char_defences_add(ch, affected_alloc);
@@ -300,10 +306,16 @@ void affect_remove(struct char_data *ch, struct affected_type *af)
     return;
   }
 
-  affect_modify(ch, af->location, af->modifier, af->bitvector, FALSE);
-  REMOVE_FROM_LIST(af, ch->affected, next);
-  free(af);
-  affect_total(ch);
+  {
+    long aff_before = AFF_FLAGS(ch) & GMCP_AFFLICTION_BITS;
+    affect_modify(ch, af->location, af->modifier, af->bitvector, FALSE);
+    REMOVE_FROM_LIST(af, ch->affected, next);
+    free(af);
+    affect_total(ch);
+    long newly_cleared = aff_before & ~(AFF_FLAGS(ch) & GMCP_AFFLICTION_BITS);
+    if (newly_cleared)
+      gmcp_send_char_afflictions_remove(ch, newly_cleared);
+  }
 
   if (spell_type > 0 && spell_type <= MAX_SPELLS &&
       !affected_by_spell(ch, spell_type))
@@ -391,6 +403,7 @@ void char_from_room(struct char_data *ch)
       if (GET_OBJ_VAL(GET_EQ(ch, WEAR_LIGHT), 2))	/* Light is ON */
 	world[IN_ROOM(ch)].light--;
 
+  gmcp_notify_room_players_remove(ch);
   REMOVE_FROM_LIST(ch, world[IN_ROOM(ch)].people, next_in_room);
   IN_ROOM(ch) = NOWHERE;
   ch->next_in_room = NULL;
@@ -426,6 +439,9 @@ void char_to_room(struct char_data *ch, room_rnum room)
       zone_table[world[room].zone].empty_age = 0;
 
     gmcp_send_room_info(ch);
+    gmcp_send_room_players(ch);
+    gmcp_notify_room_players_add(ch);
+    gmcp_send_discord_status(ch);
   }
 }
 

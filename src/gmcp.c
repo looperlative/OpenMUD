@@ -212,6 +212,20 @@ int gmcp_strip_iac(struct descriptor_data *d, char *buf, int len)
 }
 
 /* -----------------------------------------------------------------------
+ * Core lifecycle
+ * ----------------------------------------------------------------------- */
+
+void gmcp_send_ping(struct descriptor_data *d)
+{
+  gmcp_send_packet(d, "Core.Ping", "{}");
+}
+
+void gmcp_send_goodbye(struct descriptor_data *d)
+{
+  gmcp_send_packet(d, "Core.Goodbye", "{}");
+}
+
+/* -----------------------------------------------------------------------
  * Game state senders
  * ----------------------------------------------------------------------- */
 
@@ -485,4 +499,179 @@ void gmcp_send_char_defences_remove(struct char_data *ch, int spell_type)
     json_escape(spell_info[spell_type].name, ename, sizeof(ename)));
 
   gmcp_send_packet(ch->desc, "Char.Defences.Remove", json);
+}
+
+/* -----------------------------------------------------------------------
+ * Char.Afflictions — negative-condition tracking (blind, poison, etc.)
+ * ----------------------------------------------------------------------- */
+
+static const struct { long bit; const char *name; } affliction_map[] = {
+  { AFF_BLIND,  "blind"    },
+  { AFF_CURSE,  "cursed"   },
+  { AFF_POISON, "poisoned" },
+  { AFF_SLEEP,  "asleep"   },
+  { AFF_CHARM,  "charmed"  },
+  { 0, NULL }
+};
+
+void gmcp_send_char_afflictions_list(struct char_data *ch)
+{
+  char json[512], *p = json, *end = json + sizeof(json) - 4;
+  long aff;
+  int i, first = 1;
+
+  if (!ch->desc || !ch->desc->gmcp_enabled)
+    return;
+
+  aff = AFF_FLAGS(ch);
+  *p++ = '[';
+  for (i = 0; affliction_map[i].bit; i++) {
+    if (!(aff & affliction_map[i].bit))
+      continue;
+    p += snprintf(p, end - p, "%s\"%s\"", first ? "" : ",", affliction_map[i].name);
+    first = 0;
+  }
+  *p++ = ']';
+  *p   = '\0';
+
+  gmcp_send_packet(ch->desc, "Char.Afflictions.List", json);
+}
+
+void gmcp_send_char_afflictions_add(struct char_data *ch, long bits)
+{
+  char json[64];
+  int i;
+
+  if (!ch->desc || !ch->desc->gmcp_enabled)
+    return;
+
+  for (i = 0; affliction_map[i].bit; i++) {
+    if (!(bits & affliction_map[i].bit))
+      continue;
+    snprintf(json, sizeof(json), "\"%s\"", affliction_map[i].name);
+    gmcp_send_packet(ch->desc, "Char.Afflictions.Add", json);
+  }
+}
+
+void gmcp_send_char_afflictions_remove(struct char_data *ch, long bits)
+{
+  char json[64];
+  int i;
+
+  if (!ch->desc || !ch->desc->gmcp_enabled)
+    return;
+
+  for (i = 0; affliction_map[i].bit; i++) {
+    if (!(bits & affliction_map[i].bit))
+      continue;
+    snprintf(json, sizeof(json), "\"%s\"", affliction_map[i].name);
+    gmcp_send_packet(ch->desc, "Char.Afflictions.Remove", json);
+  }
+}
+
+/* -----------------------------------------------------------------------
+ * Room.Players — player occupant list for the current room
+ * ----------------------------------------------------------------------- */
+
+/* Send the full Room.Players list to ch (called when ch enters a room). */
+void gmcp_send_room_players(struct char_data *ch)
+{
+  char json[4096], *p = json, *end = json + sizeof(json) - 4;
+  struct char_data *vict;
+  char ename[128];
+  int first = 1;
+  room_rnum room;
+
+  if (!ch->desc || !ch->desc->gmcp_enabled)
+    return;
+
+  room = IN_ROOM(ch);
+  if (room == NOWHERE)
+    return;
+
+  *p++ = '[';
+  for (vict = world[room].people; vict && p < end; vict = vict->next_in_room) {
+    if (vict == ch || IS_NPC(vict))
+      continue;
+    p += snprintf(p, end - p, "%s{\"name\":\"%s\"}",
+      first ? "" : ",",
+      json_escape(GET_PC_NAME(vict), ename, sizeof(ename)));
+    first = 0;
+  }
+  *p++ = ']';
+  *p   = '\0';
+
+  gmcp_send_packet(ch->desc, "Room.Players", json);
+}
+
+/* Notify existing room PCs that ch has arrived. */
+void gmcp_notify_room_players_add(struct char_data *ch)
+{
+  char json[256], ename[128];
+  struct char_data *vict;
+  room_rnum room;
+
+  if (IS_NPC(ch))
+    return;
+
+  room = IN_ROOM(ch);
+  if (room == NOWHERE)
+    return;
+
+  snprintf(json, sizeof(json), "{\"name\":\"%s\"}",
+           json_escape(GET_PC_NAME(ch), ename, sizeof(ename)));
+
+  for (vict = world[room].people; vict; vict = vict->next_in_room) {
+    if (vict == ch || IS_NPC(vict) || !vict->desc || !vict->desc->gmcp_enabled)
+      continue;
+    gmcp_send_packet(vict->desc, "Room.Players.Add", json);
+  }
+}
+
+/* Notify remaining room PCs that ch is leaving. Call before removing ch. */
+void gmcp_notify_room_players_remove(struct char_data *ch)
+{
+  char json[256], ename[128];
+  struct char_data *vict;
+  room_rnum room;
+
+  if (IS_NPC(ch))
+    return;
+
+  room = IN_ROOM(ch);
+  if (room == NOWHERE)
+    return;
+
+  snprintf(json, sizeof(json), "{\"name\":\"%s\"}",
+           json_escape(GET_PC_NAME(ch), ename, sizeof(ename)));
+
+  for (vict = world[room].people; vict; vict = vict->next_in_room) {
+    if (vict == ch || IS_NPC(vict) || !vict->desc || !vict->desc->gmcp_enabled)
+      continue;
+    gmcp_send_packet(vict->desc, "Room.Players.Remove", json);
+  }
+}
+
+/* -----------------------------------------------------------------------
+ * External.Discord — rich-presence status for Discord integration
+ * ----------------------------------------------------------------------- */
+
+void gmcp_send_discord_status(struct char_data *ch)
+{
+  char json[512], rname[256], cname[64];
+  room_rnum room;
+
+  if (!ch->desc || !ch->desc->gmcp_enabled)
+    return;
+
+  room = IN_ROOM(ch);
+
+  snprintf(json, sizeof(json),
+    "{\"game\":\"NewCirMUD\",\"details\":\"Level %d %s\",\"state\":\"%s\"}",
+    (int)GET_LEVEL(ch),
+    json_escape(pc_class_types[(int)GET_CLASS(ch)], cname, sizeof(cname)),
+    room != NOWHERE ?
+      json_escape(world[room].name, rname, sizeof(rname)) : "Unknown");
+
+  gmcp_send_packet(ch->desc, "External.Discord.Status", json);
 }

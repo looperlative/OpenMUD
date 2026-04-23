@@ -38,6 +38,28 @@ Sent once immediately after `IAC DO GMCP` is received.
 
 ---
 
+### `Core.Ping`
+
+Sent to every connected descriptor every 60 real seconds. Clients may use this to measure round-trip latency; the payload is always an empty object.
+
+```json
+{}
+```
+
+No response is required from the client.
+
+---
+
+### `Core.Goodbye`
+
+Sent immediately before the server closes a connection (player `quit`, link-death, idle disconnect, god `boot`, etc.). Allows clients to distinguish a clean server-side close from a dropped connection.
+
+```json
+{}
+```
+
+---
+
 ### `Char.StatusVars`
 
 Sent once at login/reconnect. Describes the *labels* for the status fields; values are in `Char.Status` and `Char.Vitals`.
@@ -96,6 +118,50 @@ Sent on: login, reconnect, each combat round (attacker and defender), every dama
 
 ---
 
+### `Char.Afflictions.List`
+
+Sent at login and reconnect. Array of currently active affliction names. Only the five AFF flags tracked as afflictions are included (see table under `Char.Afflictions.Add`). An empty array means the character has no active afflictions.
+
+```json
+["poisoned","blind"]
+```
+
+---
+
+### `Char.Afflictions.Add`
+
+Sent when an affliction flag transitions from absent to present — i.e., the first spell affect that sets the flag is applied. One packet per affliction name.
+
+```json
+"poisoned"
+```
+
+Tracked affliction flags:
+
+| AFF flag | Name sent |
+|---|---|
+| `AFF_BLIND` | `"blind"` |
+| `AFF_CURSE` | `"cursed"` |
+| `AFF_POISON` | `"poisoned"` |
+| `AFF_SLEEP` | `"asleep"` |
+| `AFF_CHARM` | `"charmed"` |
+
+Note: `Char.Defences.Add` is also sent for any spell affect regardless of type. `Char.Afflictions.Add` is the client signal that the *condition* (AFF flag) is newly active.
+
+---
+
+### `Char.Afflictions.Remove`
+
+Sent when an affliction flag transitions from present to absent — i.e., the last spell affect holding that flag is removed. One packet per affliction name. Plain string per IRE convention.
+
+```json
+"poisoned"
+```
+
+Triggers: spell expiry (`affect_update`), cure spells (`cure poison`, `remove curse`, `cure blindness`, etc.), character death (all affects stripped), or god commands.
+
+---
+
 ### `Room.Info`
 
 Sent whenever the character enters a room: normal movement, god `goto`, `teleport`, `summon`, `recall`, area spells that move the character, and any other path through `char_to_room()`. Also sent at reconnect.
@@ -119,6 +185,40 @@ Sent whenever the character enters a room: normal movement, god `goto`, `telepor
 | `exits` | object | Six direction keys (`n`,`e`,`s`,`w`,`u`,`d`); `true` = exit exists and is open, `false` = no exit or exit is closed/locked |
 
 A closed door shows `false`. A locked door also shows `false`. There is no distinction between "no exit" and "closed exit" in this field.
+
+---
+
+### `Room.Players`
+
+Sent to `ch` when they enter a room. Array of all other player characters currently in the room, excluding `ch` themselves and all NPCs. An empty array means no other players are present.
+
+```json
+[{"name":"Aragorn"},{"name":"Legolas"}]
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | string | PC name of the other player |
+
+---
+
+### `Room.Players.Add`
+
+Sent to every GMCP-enabled PC already in a room when a new player character enters. Carries only the newcomer's name.
+
+```json
+{"name":"Gandalf"}
+```
+
+---
+
+### `Room.Players.Remove`
+
+Sent to every GMCP-enabled PC remaining in a room when a player character departs (movement, teleport, link-death, quit, etc.).
+
+```json
+{"name":"Gandalf"}
+```
 
 ---
 
@@ -247,6 +347,24 @@ Triggers: spell expiry (`affect_update`), cure spells (`remove curse`, `cure bli
 
 ---
 
+### `External.Discord.Status`
+
+Sent at login, reconnect, and on every room entry. Provides Discord Rich Presence data for clients (Mudlet, etc.) that integrate with Discord.
+
+```json
+{"game":"NewCirMUD","details":"Level 12 Magic User","state":"The Temple of Midgaard"}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `game` | string | Always `"NewCirMUD"` |
+| `details` | string | `"Level N <class>"` — current level and class name |
+| `state` | string | Current room name; `"Unknown"` if the character has no location |
+
+Mudlet handles this packet automatically when the Discord integration is enabled in Mudlet's settings.
+
+---
+
 ## Modules: Client → Server
 
 ### `Core.Supports.Set`
@@ -266,10 +384,18 @@ Item IDs are the C pointer address of the `obj_data` structure cast to `unsigned
 | Module | Triggers |
 |---|---|
 | `Core.Hello` | Once, on `IAC DO GMCP` |
+| `Core.Ping` | Every 60 real seconds, to all connected descriptors |
+| `Core.Goodbye` | Immediately before any socket close (quit, link-death, idle, god boot) |
 | `Char.StatusVars` | Login, reconnect |
 | `Char.Status` | Login, reconnect, level-up, any XP gain/loss, alignment change, equip/unequip, god `advance`/`set` |
 | `Char.Vitals` | Login, reconnect, combat round (both sides), any `damage()` call, healing spell, spell cast (mana cost), movement, god `restore`, regen tick, food/thirst condition change |
+| `Char.Afflictions.List` | Login, reconnect |
+| `Char.Afflictions.Add` | AFF flag transitions 0→1 (first spell holding that flag applied) |
+| `Char.Afflictions.Remove` | AFF flag transitions 1→0 (last spell holding that flag removed) |
 | `Room.Info` | Any `char_to_room()` call, reconnect |
+| `Room.Players` | Any `char_to_room()` call (sent to the arriving character), reconnect |
+| `Room.Players.Add` | A PC enters a room (sent to all other GMCP-enabled PCs already in the room) |
+| `Room.Players.Remove` | A PC leaves a room (sent to all GMCP-enabled PCs remaining in the room) |
 | `Char.Items.List` | Login, reconnect |
 | `Char.Items.Add` | `obj_to_char()`, `equip_char()` |
 | `Char.Items.Remove` | `obj_from_char()`, `unequip_char()` |
@@ -277,6 +403,7 @@ Item IDs are the C pointer address of the `obj_data` structure cast to `unsigned
 | `Char.Defences.Add` | Spell affect applied (first instance of that spell type only) |
 | `Char.Defences.Remove` | Last instance of a spell affect removed (expiry, cure, death, god purge) |
 | `Comm.Channel.Text` | say, tell, whisper, ask, gsay, gossip, holler, auction, congratulate, quest |
+| `External.Discord.Status` | Login, reconnect, any `char_to_room()` call |
 
 ---
 
@@ -286,3 +413,4 @@ Item IDs are the C pointer address of the `obj_data` structure cast to `unsigned
 2. Enable GMCP: `msdp.sendRequest("Core.Supports.Set", {"Char.Vitals 1", "Room.Info 1", "Char.Status 1"})` — though the server sends all modules regardless.
 3. Register handlers with `registerAnonymousEventHandler("gmcp.Char.Vitals", function() ... end)`.
 4. GMCP data is available in Mudlet as the `gmcp` table: `gmcp.Char.Vitals.hp`, `gmcp.Room.Info.name`, etc.
+5. For Discord integration, enable **Discord Rich Presence** in Mudlet's preferences. Mudlet handles `External.Discord.Status` automatically once enabled.

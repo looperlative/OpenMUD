@@ -1,6 +1,13 @@
 # Summary of Changes Since `f82b7751`
 
-64 commits, +5,546 / -986 lines across 69 files.
+65 commits, +5,546 / -986 lines across 69 files.
+
+## Additional GMCP Modules (`src/gmcp.c`, `src/gmcp.h`)
+- **Core.Ping** — server sends `Core.Ping {}` to all connected descriptors every 60 seconds (heartbeat); keeps connections alive and lets clients measure latency (`comm.c` heartbeat)
+- **Core.Goodbye** — server sends `Core.Goodbye {}` immediately before closing any socket (`close_socket` in `comm.c`)
+- **Char.Afflictions.List/Add/Remove** — tracks negative AFF-flag conditions (blind, cursed, poisoned, asleep, charmed) separately from spell defences; `Add` fires on first flag transition, `Remove` fires when the flag fully clears; full list sent on login/reconnect (`handler.c` `affect_to_char`/`affect_remove`, `interpreter.c`)
+- **Room.Players** — sends the list of other PCs in the room to `ch` on every room entry; `Room.Players.Add`/`Room.Players.Remove` notifies all other GMCP-enabled PCs in the room when someone arrives or departs (`handler.c` `char_to_room`/`char_from_room`)
+- **External.Discord.Status** — sends Discord Rich Presence data (`game`, `details` as level+class, `state` as current room name) on login and whenever `ch` changes rooms
 
 ## Locker System (`src/locker.c`, `src/locker.h`)
 - Players can create named personal storage lockers (`locker create <name>`)
