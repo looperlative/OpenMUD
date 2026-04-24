@@ -1,6 +1,16 @@
 # Summary of Changes Since `f82b7751`
 
-65 commits, +5,546 / -986 lines across 69 files.
+## Web-Based OLC (`src/webserver_olc.c`, `src/webserver_olc.h`, `lib/www/olc/`)
+- Full web-based OLC matching all in-game `medit`/`oedit`/`redit`/`zedit` capabilities, accessible via the existing libcivetweb server at `http://localhost:4445/olc/`
+- Thread-safe request/response queue: HTTP handlers (civetweb threads) enqueue requests and block on a per-request `pthread_cond_t`; the game loop drains the queue every 100ms heartbeat pulse without any lock held during MUD data access
+- Authentication via existing player credentials (`load_char` + `CRYPT` password check); only immortals (`level >= LVL_IMMORT`) may log in; session tokens (32-char hex from `/dev/urandom`) stored server-side with 1-hour TTL
+- REST-like JSON API: `POST /olc/login`, `POST /olc/logout`, `GET /olc/zones`, `GET/POST /olc/room/<vnum>`, `GET/POST /olc/mob/<vnum>`, `GET/POST /olc/obj/<vnum>`, `GET/POST /olc/zone/<num>/commands`
+- Changes take effect immediately in the running MUD (in-memory prototype update) and write to the same files as in-game OLC (`world/mob/medit.mob`, `world/obj/oedit.obj`, `world/wld/redit.wld`, `world/zon/<zone>.zon`)
+- Permission model identical to in-game OLC: zone must be CLOSED and the player's `pfilepos` must appear in `permissions.authors[]` or `permissions.editors[]`; `LVL_GRGOD+` bypasses
+- Functional HTML/CSS/JS web UI: zone sidebar, room editor (name, desc, flags, sector, exits with door flags, extra descs), mob editor (all stats, ability scores, act/affect flags), object editor (type, values, extra/wear flags, affects, extra descs), zone commands table (add/remove rows)
+- `src/olc.c`: removed `static` from `olc_save_mobile`, `olc_save_object`, `olc_save_room`, `zedit_save_zone_file`; declarations added to `src/olc.h`
+- `src/comm.c`: `webserver_olc_heartbeat()` called every heartbeat pulse; idle-loop `select()` now uses a 100ms timeout so the OLC queue is drained even with no player connections
+- `src/Makefile.in`: added `webserver_olc.o`
 
 ## Embedded Web Server (`src/webserver.c`, `src/webserver.h`)
 - When `libcivetweb` is present at build time, the MUD starts a lightweight HTTP server on `127.0.0.1:4445` (localhost only; intended to be proxied by Apache for HTTPS)

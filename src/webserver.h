@@ -9,5 +9,6 @@
 void webserver_init(const char *data_dir);
 void webserver_shutdown(void);
 void webserver_refresh_who(void);
+void webserver_olc_heartbeat(void);
 
 #endif /* __WEBSERVER_H__ */

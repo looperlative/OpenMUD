@@ -10,6 +10,7 @@
 #include "comm.h"
 #include "db.h"
 #include "webserver.h"
+#include "webserver_olc.h"
 
 #ifdef HAVE_CIVETWEB
 
@@ -148,6 +149,7 @@ void webserver_init(const char *data_dir)
   }
 
   mg_set_request_handler(web_ctx, MUDWHO_URI, mudwho_handler, NULL);
+  wolc_register_handlers(web_ctx);
   log("WEBSERVER: Listening on http://%s/", WEB_PORT);
 }
 
@@ -158,6 +160,7 @@ void webserver_shutdown(void)
     web_ctx = NULL;
     log("WEBSERVER: Stopped.");
   }
+  wolc_shutdown();
 }
 
 #else /* HAVE_CIVETWEB not defined — empty stubs */

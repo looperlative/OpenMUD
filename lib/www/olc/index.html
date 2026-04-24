@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NewCircMUD Web OLC</title>
+  <link rel="stylesheet" href="olc.css">
+</head>
+<body>
+
+<!-- Header -->
+<div id="header">
+  <h1>NewCircMUD Web OLC</h1>
+  <span id="user-info"></span>
+  <button class="btn" id="btn-logout" style="display:none">Logout</button>
+</div>
+
+<!-- Login screen -->
+<div id="login-screen">
+  <h2>OLC Login</h2>
+  <label for="login-user">Player name</label>
+  <input type="text" id="login-user" autocomplete="username" spellcheck="false">
+  <label for="login-pass">Password</label>
+  <input type="password" id="login-pass" autocomplete="current-password">
+  <div id="login-err"></div>
+  <button class="btn btn-primary" id="btn-login" style="width:100%">Login</button>
+</div>
+
+<!-- Main app (hidden until logged in) -->
+<div id="app" style="display:none">
+  <div id="sidebar">
+    <h2>Zones</h2>
+    <ul id="zone-list"></ul>
+  </div>
+  <div id="editor">
+    <div id="editor-placeholder">Select a zone to begin editing.</div>
+  </div>
+</div>
+
+<script src="olc.js"></script>
+</body>
+</html>

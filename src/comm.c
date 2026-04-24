@@ -617,15 +617,25 @@ void game_loop(socket_t mother_desc)
     if (descriptor_list == NULL) {
       log("No connections.  Going to sleep.");
       make_who2html();
-      FD_ZERO(&input_set);
-      FD_SET(mother_desc, &input_set);
-      if (select(mother_desc + 1, &input_set, (fd_set *) 0, (fd_set *) 0, NULL) < 0) {
-	if (errno == EINTR)
-	  log("Waking up to process signal.");
-	else
-	  perror("SYSERR: Select coma");
-      } else
-	log("New connection.  Waking up.");
+      /* Use a short timeout so the heartbeat (webserver OLC queue etc.)
+       * still fires even with no player connections. */
+      do {
+        struct timeval idle_timeout;
+        idle_timeout.tv_sec  = 0;
+        idle_timeout.tv_usec = 100000; /* 100 ms = one pulse */
+        FD_ZERO(&input_set);
+        FD_SET(mother_desc, &input_set);
+        if (select(mother_desc + 1, &input_set, (fd_set *) 0, (fd_set *) 0, &idle_timeout) < 0) {
+          if (errno == EINTR)
+            log("Waking up to process signal.");
+          else
+            perror("SYSERR: Select coma");
+          break;
+        }
+        heartbeat(++pulse);
+      } while (!FD_ISSET(mother_desc, &input_set));
+      if (FD_ISSET(mother_desc, &input_set))
+        log("New connection.  Waking up.");
       gettimeofday(&last_time, (struct timezone *) 0);
     }
     /* Set up the input, output, and exception sets for select(). */
@@ -907,6 +917,8 @@ void heartbeat(int pulse)
 
   if (!(pulse % PULSE_TIMESAVE))
     save_mud_time(&time_info);
+
+  webserver_olc_heartbeat();
 
   /* Every pulse! Don't want them to stink the place up... */
   extract_pending_chars();

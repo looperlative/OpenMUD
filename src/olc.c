@@ -77,9 +77,9 @@ const char *attack_types[] =
     "\n"
 };
 
-static void olc_save_mobile(int vnum);
-static void olc_save_object(int vnum);
-static void olc_save_room(int vnum);
+void olc_save_mobile(int vnum);
+void olc_save_object(int vnum);
+void olc_save_room(int vnum);
 int olc_vnum_to_zone_rnum(int vnum);
 int olc_ok_to_edit(struct char_data *ch, int vnum);
 
@@ -1720,7 +1720,7 @@ static char *olc_bits_to_letters(int bits, char *buf)
     return buf;
 }
 
-static void olc_save_mobile(int vnum)
+void olc_save_mobile(int vnum)
 {
     int rnum = real_mobile(vnum);
     if (rnum == NOBODY)
@@ -1782,7 +1782,7 @@ static void olc_save_mobile(int vnum)
     fclose(fp);
 }
 
-static void olc_save_object(int vnum)
+void olc_save_object(int vnum)
 {
     int rnum = real_object(vnum);
     if (rnum == NOTHING)
@@ -1825,7 +1825,7 @@ static void olc_save_object(int vnum)
     fclose(fp);
 }
 
-static void olc_save_room(int vnum)
+void olc_save_room(int vnum)
 {
     int rnum = real_room(vnum);
     if (rnum == NOWHERE)
@@ -1896,7 +1896,7 @@ static void olc_save_room(int vnum)
  * GRANT <author/editor> <player>
  * REVOKE <author/editor> <player>
  */
-static int zedit_save_zone_file(int rnum)
+int zedit_save_zone_file(int rnum)
 {
     struct zone_data *z = &zone_table[rnum];
     char path[256], bakpath[256];

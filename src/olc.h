@@ -129,5 +129,10 @@ void olc_load_permissions(void);
 int olc_ok_to_edit(struct char_data *ch, int vnum);
 int olc_ok_to_enter(struct char_data *ch, struct room_data *rm);
 int olc_ok_to_use_or_rent(struct char_data *ch, int vnum);
+int  olc_vnum_to_zone_rnum(int vnum);
+void olc_save_mobile(int vnum);
+void olc_save_object(int vnum);
+void olc_save_room(int vnum);
+int  zedit_save_zone_file(int rnum);
 
 #endif /* __olc_h__ */
