@@ -272,15 +272,17 @@ void gmcp_send_char_status(struct char_data *ch)
   align_str = IS_GOOD(ch) ? "good" : IS_EVIL(ch) ? "evil" : "neutral";
 
   snprintf(json, sizeof(json),
-    "{\"name\":\"%s\",\"class\":\"%s\",\"level\":%d,\"align\":\"%s\","
-    "\"xp\":%d,\"xp_next\":%d,\"ac\":%d}",
-    json_escape(GET_PC_NAME(ch), ename, sizeof(ename)),
-    json_escape(pc_class_types[(int)GET_CLASS(ch)], eclass, sizeof(eclass)),
-    (int)GET_LEVEL(ch),
-    align_str,
-    GET_EXP(ch),
-    level_exp(GET_CLASS(ch), GET_LEVEL(ch) + 1),
-    compute_armor_class(ch) / 10);
+	   "{\"name\":\"%s\",\"class\":\"%s\",\"level\":%d,\"align\":\"%s\","
+	   "\"xp\":%d,\"xp_next\":%d,\"ac\":%d,\"alignnum\":\"%d\"}",
+	   json_escape(GET_PC_NAME(ch), ename, sizeof(ename)),
+	   json_escape(pc_class_types[(int)GET_CLASS(ch)], eclass, sizeof(eclass)),
+	   (int)GET_LEVEL(ch),
+	   align_str,
+	   GET_EXP(ch),
+	   level_exp(GET_CLASS(ch), GET_LEVEL(ch) + 1),
+	   compute_armor_class(ch) / 10,
+	   GET_ALIGNMENT(ch)
+      );
 
   gmcp_send_packet(ch->desc, "Char.Status", json);
 }
